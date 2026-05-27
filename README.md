@@ -112,6 +112,22 @@ Expected tools:
 
 Full Gemini execution requires Google model credentials. Use Vertex AI with Application Default Credentials or provide a Gemini API key.
 
+## Minimal Test Web UI
+
+Run the local test UI:
+
+```powershell
+python web_app.py
+```
+
+Open:
+
+```text
+http://127.0.0.1:3000/
+```
+
+This is intentionally minimal. It shells out to the working `adk run dignity_agent ...` command and displays the returned answer plus raw stdout for debugging.
+
 ## Ingest Into Elastic
 
 Validate all local JSONL without writing:
