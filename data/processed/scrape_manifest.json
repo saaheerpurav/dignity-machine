@@ -1,0 +1,388 @@
+{
+  "counts": {
+    "ssa_forms": 105,
+    "ssa_policy": 168
+  },
+  "generated_at": "2026-05-27T08:23:08.175660+00:00",
+  "source_count": 42,
+  "sources": [
+    {
+      "chunks": 3,
+      "doc_id": "poms_di_22505_001_medical_and_nonmedical_evidence",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_22505_001_medical_and_nonmedical_evidence.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0422505001",
+      "words": 929
+    },
+    {
+      "chunks": 5,
+      "doc_id": "poms_di_22505_003_acceptable_medical_source",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_22505_003_acceptable_medical_source.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/lnx/0422505003!opendocument",
+      "words": 1314
+    },
+    {
+      "chunks": 2,
+      "doc_id": "poms_di_22505_007_developing_medical_source_evidence",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_22505_007_developing_medical_source_evidence.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/links/0422505007",
+      "words": 398
+    },
+    {
+      "chunks": 6,
+      "doc_id": "poms_di_24501_016_evidence_evaluation",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24501_016_evidence_evaluation.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/lnx/0424501016",
+      "words": 1880
+    },
+    {
+      "chunks": 3,
+      "doc_id": "poms_di_24501_020_medically_determinable_impairment",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24501_020_medically_determinable_impairment.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0424501020",
+      "words": 728
+    },
+    {
+      "chunks": 9,
+      "doc_id": "poms_di_24501_021_evaluating_symptoms",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24501_021_evaluating_symptoms.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0424501021",
+      "words": 2582
+    },
+    {
+      "chunks": 2,
+      "doc_id": "poms_di_24503_015_other_medical_evidence",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24503_015_other_medical_evidence.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/lnx/0424503015",
+      "words": 402
+    },
+    {
+      "chunks": 3,
+      "doc_id": "poms_di_24503_025_medical_opinions_after_2017",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24503_025_medical_opinions_after_2017.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0424503025",
+      "words": 892
+    },
+    {
+      "chunks": 2,
+      "doc_id": "poms_di_24503_030_medical_opinion_articulation_after_2017",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24503_030_medical_opinion_articulation_after_2017.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/lnx/0424503030",
+      "words": 519
+    },
+    {
+      "chunks": 7,
+      "doc_id": "poms_di_24505_030_potential_impairment",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24505_030_potential_impairment.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/lnx/0424505030!opendocument",
+      "words": 1954
+    },
+    {
+      "chunks": 8,
+      "doc_id": "poms_di_26515_001_adult_initial_rationale",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_26515_001_adult_initial_rationale.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0426515001",
+      "words": 2527
+    },
+    {
+      "chunks": 1,
+      "doc_id": "poms_di_24510_000_rfc_toc",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24510_000_rfc_toc.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/links/0424510000",
+      "words": 304
+    },
+    {
+      "chunks": 14,
+      "doc_id": "poms_di_24510_006_rfc_assessment",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24510_006_rfc_assessment.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.NSF/lnx/0424510006",
+      "words": 4277
+    },
+    {
+      "chunks": 4,
+      "doc_id": "poms_di_24510_057_sustainability_rfc",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24510_057_sustainability_rfc.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0424510057",
+      "words": 1095
+    },
+    {
+      "chunks": 2,
+      "doc_id": "poms_di_24515_012_evaluating_lay_evidence",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24515_012_evaluating_lay_evidence.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0424515012",
+      "words": 650
+    },
+    {
+      "chunks": 3,
+      "doc_id": "poms_di_24515_076_fibromyalgia",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24515_076_fibromyalgia.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.NSF/lnx/0424515076",
+      "words": 712
+    },
+    {
+      "chunks": 19,
+      "doc_id": "poms_di_24515_075_chronic_fatigue_syndrome",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24515_075_chronic_fatigue_syndrome.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0424515075",
+      "words": 5912
+    },
+    {
+      "chunks": 2,
+      "doc_id": "poms_di_24555_001_interstitial_cystitis",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24555_001_interstitial_cystitis.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0424555001",
+      "words": 658
+    },
+    {
+      "chunks": 2,
+      "doc_id": "poms_di_25005_001_past_relevant_work",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_25005_001_past_relevant_work.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0425005001",
+      "words": 655
+    },
+    {
+      "chunks": 3,
+      "doc_id": "poms_di_25010_001_medical_vocational_profiles",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_25010_001_medical_vocational_profiles.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0425010001",
+      "words": 721
+    },
+    {
+      "chunks": 3,
+      "doc_id": "poms_di_25025_001_medical_vocational_guidelines",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_25025_001_medical_vocational_guidelines.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0425025001",
+      "words": 955
+    },
+    {
+      "chunks": 5,
+      "doc_id": "poms_gn_03101_020_good_cause_late_appeal",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03101_020_good_cause_late_appeal.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0203101020",
+      "words": 1420
+    },
+    {
+      "chunks": 2,
+      "doc_id": "poms_gn_03101_040_appeal_initial_determination",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03101_040_appeal_initial_determination.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0203101040",
+      "words": 403
+    },
+    {
+      "chunks": 5,
+      "doc_id": "poms_gn_03102_100_reconsideration_process",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03102_100_reconsideration_process.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0203102100",
+      "words": 1462
+    },
+    {
+      "chunks": 4,
+      "doc_id": "poms_gn_03102_200_reconsideration_dismissal",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03102_200_reconsideration_dismissal.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0203102200",
+      "words": 1230
+    },
+    {
+      "chunks": 3,
+      "doc_id": "poms_gn_03102_225_ssa_561_reconsideration",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03102_225_ssa_561_reconsideration.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/links/0203102225",
+      "words": 850
+    },
+    {
+      "chunks": 1,
+      "doc_id": "poms_gn_03102_250_ssa_561_reconsideration_form",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03102_250_ssa_561_reconsideration_form.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0203102250",
+      "words": 125
+    },
+    {
+      "chunks": 2,
+      "doc_id": "poms_gn_03102_300_field_office_reconsideration_development",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03102_300_field_office_reconsideration_development.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0203102300",
+      "words": 635
+    },
+    {
+      "chunks": 8,
+      "doc_id": "poms_gn_03103_010_hearing_process",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03103_010_hearing_process.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0203103010",
+      "words": 2322
+    },
+    {
+      "chunks": 2,
+      "doc_id": "poms_gn_03103_020_ha_501_hearing_request",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03103_020_ha_501_hearing_request.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/lnx/0203103020",
+      "words": 562
+    },
+    {
+      "chunks": 10,
+      "doc_id": "poms_gn_03103_080_forwarding_hearing_request",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03103_080_forwarding_hearing_request.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/lnx/0203103080",
+      "words": 2969
+    },
+    {
+      "chunks": 5,
+      "doc_id": "poms_di_22515_025_ssa_3368_adult_disability_report",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_di_22515_025_ssa_3368_adult_disability_report.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0422515025",
+      "words": 1364
+    },
+    {
+      "chunks": 6,
+      "doc_id": "poms_di_11005_055_completing_ssa_827",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_di_11005_055_completing_ssa_827.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/lnx/0411005055",
+      "words": 1922
+    },
+    {
+      "chunks": 10,
+      "doc_id": "poms_di_11005_056_signature_requirements_ssa_827",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_di_11005_056_signature_requirements_ssa_827.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.Nsf/lnx/0411005056",
+      "words": 3166
+    },
+    {
+      "chunks": 7,
+      "doc_id": "poms_di_11005_057_obtaining_ssa_827",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_di_11005_057_obtaining_ssa_827.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.NSF/lnx/0411005057",
+      "words": 1980
+    },
+    {
+      "chunks": 5,
+      "doc_id": "poms_ha_01110_010_appointing_representative",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_ha_01110_010_appointing_representative.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/2501110010",
+      "words": 1333
+    },
+    {
+      "chunks": 2,
+      "doc_id": "poms_gn_03905_030_ssa_1696_forms",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03905_030_ssa_1696_forms.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0203905030",
+      "words": 380
+    },
+    {
+      "chunks": 19,
+      "doc_id": "poms_gn_03910_040_appointment_representative",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_gn_03910_040_appointment_representative.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/lnx/0203910040",
+      "words": 5880
+    },
+    {
+      "chunks": 9,
+      "doc_id": "poms_ha_01210_080_right_to_representation",
+      "index": "ssa_forms",
+      "raw_path": "data\\raw\\poms_ha_01210_080_right_to_representation.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/2501210080",
+      "words": 2733
+    },
+    {
+      "chunks": 27,
+      "doc_id": "poms_di_34005_101_musculoskeletal_listings",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_34005_101_musculoskeletal_listings.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/lnx/0434005101",
+      "words": 8247
+    },
+    {
+      "chunks": 32,
+      "doc_id": "poms_di_34001_032_mental_disorders",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_34001_032_mental_disorders.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/apps10/poms.nsf/lnx/0434001032",
+      "words": 10056
+    },
+    {
+      "chunks": 6,
+      "doc_id": "poms_di_24583_005_psychiatric_review_technique",
+      "index": "ssa_policy",
+      "raw_path": "data\\raw\\poms_di_24583_005_psychiatric_review_technique.html",
+      "status": "cached",
+      "url": "https://secure.ssa.gov/poms.nsf/lnx/0424583005",
+      "words": 1850
+    }
+  ]
+}
