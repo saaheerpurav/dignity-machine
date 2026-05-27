@@ -1,0 +1,92 @@
+[
+  {
+    "id": "dignity.search_ssa_policy",
+    "type": "index_search",
+    "description": "Searches official SSA/POMS policy chunks for disability evidence rules. Use this when the agent needs policy support for denial reasons, fibromyalgia, medically determinable impairment, symptom evaluation, RFC, sustained work, medical opinions, vocational rules, or listings. Returns cited policy snippets from the ssa_policy index. Not for claimant medical records.",
+    "tags": ["dignity-machine", "ssa", "policy", "elastic-track"],
+    "configuration": {
+      "pattern": "ssa_policy",
+      "row_limit": 8,
+      "custom_instructions": "Search title, section, content, embedding_text, condition_tags, and appeal_stage_tags. Prefer chunks with URLs and source_type. Return doc_id, chunk_id, title, section, url, source_type, and the shortest relevant content excerpt. Keep results grounded in SSA/POMS policy."
+    }
+  },
+  {
+    "id": "dignity.search_ssa_forms",
+    "type": "index_search",
+    "description": "Searches SSA appeal and form workflow guidance. Use this for reconsideration, good cause for late appeals, SSA-561, HA-501, SSA-827 authorization, SSA-3368 adult disability report, SSA-1696 representative appointment, hearing process, and right-to-representation questions. Not for medical evidence facts.",
+    "tags": ["dignity-machine", "ssa", "forms", "appeals", "elastic-track"],
+    "configuration": {
+      "pattern": "ssa_forms",
+      "row_limit": 8,
+      "custom_instructions": "Search title, section, content, embedding_text, and appeal_stage_tags. Return doc_id, chunk_id, title, section, url, source_type, and concise cited excerpts. Prefer reconsideration-stage guidance when the case stage is reconsideration."
+    }
+  },
+  {
+    "id": "dignity.search_case_documents",
+    "type": "index_search",
+    "description": "Searches claimant case documents for the Maria Lopez demo case. Use this to retrieve denial reasons, medical notes, medication history, symptom journal entries, work history, function report details, provider list, and missing-record references. This is claimant evidence, not SSA policy.",
+    "tags": ["dignity-machine", "case-documents", "maria-lopez", "elastic-track"],
+    "configuration": {
+      "pattern": "case_documents",
+      "row_limit": 8,
+      "custom_instructions": "Always filter to case_id case_maria_lopez_fibro_001 unless another case_id is explicitly provided. Search content, embedding_text, extracted_fields, condition_tags, document_type, and source_name. Return doc_id, document_type, source_name, title, created_at, and relevant content excerpt."
+    }
+  },
+  {
+    "id": "dignity.search_case_memory",
+    "type": "index_search",
+    "description": "Searches Dignity Machine case memory and generated artifacts. Use this after analysis has started to retrieve previously saved evidence gaps, appeal packets, action logs, and advocate contacts. Not for initial SSA policy search.",
+    "tags": ["dignity-machine", "case-memory", "writeback", "elastic-track"],
+    "configuration": {
+      "pattern": "evidence_gaps,appeal_packets,action_logs,advocate_contacts",
+      "row_limit": 10,
+      "custom_instructions": "Search generated case memory. Prefer case_id case_maria_lopez_fibro_001 unless another case_id is explicit. Return IDs, event/tool names, timestamps, statuses, and concise text fields."
+    }
+  },
+  {
+    "id": "dignity.get_maria_documents",
+    "type": "esql",
+    "description": "Lists Maria Lopez demo case documents by type, source, title, and created date. Use this before deeper case-document search to understand what claimant evidence exists and what record types are uploaded.",
+    "tags": ["dignity-machine", "case-documents", "inventory", "elastic-track"],
+    "configuration": {
+      "query": "FROM case_documents | WHERE case_id == ?case_id | KEEP doc_id, document_type, source_name, title, created_at | SORT created_at ASC | LIMIT ?limit",
+      "params": {
+        "case_id": {
+          "type": "string",
+          "description": "Case ID to inspect. Defaults to Maria Lopez demo case.",
+          "optional": true,
+          "defaultValue": "case_maria_lopez_fibro_001"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of documents to return.",
+          "optional": true,
+          "defaultValue": 20
+        }
+      }
+    }
+  },
+  {
+    "id": "dignity.get_advocate_contact",
+    "type": "esql",
+    "description": "Retrieves trusted advocate contact metadata for a case. Use this before drafting or sending an advocate alert. This returns the allowed action types and channel but does not send any external message.",
+    "tags": ["dignity-machine", "advocate", "contact", "elastic-track"],
+    "configuration": {
+      "query": "FROM advocate_contacts | WHERE case_id == ?case_id | KEEP contact_id, name, relationship, channel, destination, allowed_actions, created_at | LIMIT ?limit",
+      "params": {
+        "case_id": {
+          "type": "string",
+          "description": "Case ID to inspect. Defaults to Maria Lopez demo case.",
+          "optional": true,
+          "defaultValue": "case_maria_lopez_fibro_001"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of advocate contacts to return.",
+          "optional": true,
+          "defaultValue": 5
+        }
+      }
+    }
+  }
+]

@@ -85,6 +85,33 @@ Use this stack:
 
 Elastic must be load-bearing in the final demo: the agent should search Elastic before reasoning, write generated findings back into Elastic, and expose visible MCP/tool traces.
 
+## Google Agent Builder / ADK
+
+The local ADK agent scaffold is in `dignity_agent/agent.py`.
+
+It connects to Elastic Agent Builder MCP at:
+
+```text
+{KIBANA_URL}/api/agent_builder/mcp
+```
+
+Validate MCP tool discovery:
+
+```powershell
+python scripts/test_adk_mcp.py
+```
+
+Expected tools:
+
+- `dignity_search_ssa_policy`
+- `dignity_search_ssa_forms`
+- `dignity_search_case_documents`
+- `dignity_search_case_memory`
+- `dignity_get_maria_documents`
+- `dignity_get_advocate_contact`
+
+Full Gemini execution requires Google model credentials. Use Vertex AI with Application Default Credentials or provide a Gemini API key.
+
 ## Ingest Into Elastic
 
 Validate all local JSONL without writing:
