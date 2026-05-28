@@ -126,7 +126,26 @@ Open:
 http://127.0.0.1:3000/
 ```
 
-This is intentionally minimal. It shells out to the working `adk run dignity_agent ...` command and displays the returned answer plus raw stdout for debugging.
+This is intentionally minimal and exists for local workflow testing before the real demo UI is built.
+Current behavior:
+
+- Runs ADK/Gemini in-process through FastAPI.
+- Uses Elastic MCP tools through the existing ADK agent.
+- Requests structured JSON from the agent.
+- Uses fixed mission buttons instead of freeform chat:
+  - `Analyze denial`
+  - `Find missing evidence`
+  - `Draft records request`
+  - `Prepare packet`
+- Shows an immediate progress timeline while the live mission runs.
+- Renders Markdown output in the browser.
+- Frontend is in `static/index.html`; backend API code stays in `web_app.py`.
+- Writeback is optional and disabled by default for casual testing.
+- When enabled, writes generated artifacts to Elastic:
+  - `evidence_gaps`
+  - `appeal_packets`
+  - `action_logs`
+- `POST /api/reset-demo-writeback` deletes generated demo artifacts for Maria from those writeback indexes.
 
 ## Ingest Into Elastic
 

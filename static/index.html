@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dignity Machine Test UI</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f6f8;
+      color: #17202a;
+    }
+    body { margin: 0; padding: 24px; }
+    main { max-width: 1020px; margin: 0 auto; }
+    header { margin-bottom: 18px; }
+    h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: 0; }
+    p { margin: 0; color: #4b5563; line-height: 1.45; }
+    section {
+      background: #ffffff;
+      border: 1px solid #d7dde4;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 14px 0;
+    }
+    button {
+      border: 0;
+      border-radius: 6px;
+      padding: 10px 14px;
+      background: #0f766e;
+      color: #ffffff;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+    }
+    button.danger { background: #b42318; }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .meta, .missions, .timeline {
+      display: grid;
+      gap: 8px;
+    }
+    .meta {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-top: 12px;
+    }
+    .missions {
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    }
+    .mission {
+      display: block;
+      min-height: 74px;
+    }
+    .mission span {
+      display: block;
+      color: #d9fffb;
+      font-size: 12px;
+      font-weight: 400;
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+    .pill, .step {
+      border: 1px solid #d7dde4;
+      border-radius: 6px;
+      padding: 8px;
+      background: #f8fafc;
+      font-size: 13px;
+      color: #334155;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .check {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #334155;
+    }
+    .status {
+      font-size: 13px;
+      color: #4b5563;
+      margin-top: 10px;
+    }
+    .timeline {
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+    .step.active {
+      border-color: #0f766e;
+      background: #ecfdf5;
+      color: #064e3b;
+      font-weight: 700;
+    }
+    .step.done {
+      border-color: #99d6c8;
+      background: #f0fdfa;
+    }
+    #answer { min-height: 160px; line-height: 1.5; }
+    #answer h1, #answer h2, #answer h3 { margin: 16px 0 8px; letter-spacing: 0; }
+    #answer h1 { font-size: 24px; }
+    #answer h2 { font-size: 20px; }
+    #answer h3 { font-size: 17px; }
+    #answer p { margin: 8px 0; color: #17202a; }
+    #answer ul, #answer ol { padding-left: 24px; }
+    #answer code { background: #eef2f7; border-radius: 4px; padding: 2px 4px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Dignity Machine Test UI</h1>
+      <p>Mission buttons for the ADK/Gemini agent connected to Elastic MCP. No caching: each mission runs live.</p>
+      <div class="meta">
+        <div class="pill" id="casePill">Case: loading</div>
+        <div class="pill" id="projectPill">Project: loading</div>
+        <div class="pill">Writeback: optional</div>
+      </div>
+    </header>
+
+    <section>
+      <div class="missions" id="missions"></div>
+      <div class="row">
+        <label class="check">
+          <input id="writeback" type="checkbox">
+          Write generated artifacts to Elastic
+        </label>
+        <button id="reset" class="danger" type="button">Reset demo writeback</button>
+      </div>
+      <p class="status" id="status">Ready.</p>
+    </section>
+
+    <section>
+      <div class="timeline" id="timeline"></div>
+    </section>
+
+    <section>
+      <label>Output</label>
+      <div id="answer">Choose a mission.</div>
+    </section>
+  </main>
+
+  <script>
+    const missions = document.getElementById('missions');
+    const reset = document.getElementById('reset');
+    const answer = document.getElementById('answer');
+    const status = document.getElementById('status');
+    const writeback = document.getElementById('writeback');
+    const casePill = document.getElementById('casePill');
+    const projectPill = document.getElementById('projectPill');
+    const timeline = document.getElementById('timeline');
+
+    const stages = [
+      'Inspect case packet',
+      'Search case documents',
+      'Search SSA policy',
+      'Search appeal forms',
+      'Get advocate contact',
+      'Generate packet'
+    ];
+    let progressTimer = null;
+    let activeStage = 0;
+
+    marked.setOptions({ breaks: true, gfm: true });
+
+    function renderTimeline() {
+      timeline.innerHTML = stages.map((stage, index) => {
+        const cls = index < activeStage ? 'done' : index === activeStage ? 'active' : '';
+        return `<div class="step ${cls}">${index + 1}. ${stage}</div>`;
+      }).join('');
+    }
+
+    function startProgress() {
+      activeStage = 0;
+      renderTimeline();
+      clearInterval(progressTimer);
+      progressTimer = setInterval(() => {
+        if (activeStage < stages.length - 1) {
+          activeStage += 1;
+          renderTimeline();
+        }
+      }, 4500);
+    }
+
+    function finishProgress() {
+      clearInterval(progressTimer);
+      activeStage = stages.length;
+      timeline.innerHTML = stages.map((stage, index) =>
+        `<div class="step done">${index + 1}. ${stage}</div>`
+      ).join('');
+    }
+
+    function setButtonsDisabled(disabled) {
+      document.querySelectorAll('button').forEach((button) => {
+        button.disabled = disabled;
+      });
+    }
+
+    async function loadConfig() {
+      const response = await fetch('/api/config');
+      const config = await response.json();
+      writeback.checked = Boolean(config.writeback_default);
+      casePill.textContent = 'Case: ' + config.case_id;
+      projectPill.textContent = 'Project: ' + config.gcp_project;
+      missions.innerHTML = config.missions.map((mission) => `
+        <button class="mission" data-mission="${mission.id}">
+          ${mission.label}
+          <span>${mission.description}</span>
+        </button>
+      `).join('');
+      missions.querySelectorAll('button').forEach((button) => {
+        button.addEventListener('click', () => runMission(button.dataset.mission));
+      });
+      renderTimeline();
+    }
+
+    async function runMission(mission) {
+      setButtonsDisabled(true);
+      status.textContent = writeback.checked
+        ? 'Running live mission with Elastic writeback...'
+        : 'Running live preview mission without Elastic writeback...';
+      answer.textContent = 'Working. Progress is shown above while the live agent runs.';
+      startProgress();
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mission, writeback: writeback.checked })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'Request failed');
+        answer.innerHTML = marked.parse(data.answer || '');
+        finishProgress();
+        status.textContent = data.writeback_enabled
+          ? 'Done. Artifacts were written to Elastic.'
+          : 'Done. Preview only; no Elastic writeback.';
+      } catch (error) {
+        clearInterval(progressTimer);
+        answer.textContent = 'Error: ' + error.message;
+        status.textContent = 'Failed.';
+      } finally {
+        setButtonsDisabled(false);
+      }
+    }
+
+    reset.addEventListener('click', async () => {
+      if (!confirm('Delete generated demo artifacts from evidence_gaps, appeal_packets, and action_logs?')) return;
+      setButtonsDisabled(true);
+      status.textContent = 'Resetting demo writeback...';
+      try {
+        const response = await fetch('/api/reset-demo-writeback', { method: 'POST' });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'Reset failed');
+        status.textContent = 'Deleted writeback docs: ' + JSON.stringify(data.deleted);
+      } catch (error) {
+        status.textContent = 'Reset failed: ' + error.message;
+      } finally {
+        setButtonsDisabled(false);
+      }
+    });
+
+    loadConfig().catch((error) => {
+      status.textContent = 'Config load failed: ' + error.message;
+    });
+  </script>
+</body>
+</html>

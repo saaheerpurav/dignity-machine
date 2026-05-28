@@ -61,6 +61,10 @@ The following is already working:
 - ADK/Gemini agent connected to Elastic MCP.
 - Local ADK smoke test works against Vertex AI project `integral-tensor-497618-a8`.
 - Minimal local web UI exists for testing only.
+- Web UI now uses an in-process ADK runner, requests structured JSON, and renders Markdown.
+- Generated gaps/packets/action logs can be written back to Elastic, but writeback is optional and disabled by default for casual testing.
+- Temporary frontend lives in `static/index.html`; backend API logic lives in `web_app.py`.
+- UI uses fixed mission buttons instead of freeform chat. Every real mission is a live run; no cache is used.
 
 Do not redo the data scrape or tool creation unless something is broken.
 
@@ -203,7 +207,8 @@ Open:
 http://127.0.0.1:3000/
 ```
 
-The current web UI is intentionally temporary. It shells out to `adk run`, so it is slow. This is acceptable for testing but not final.
+The current web UI is intentionally temporary. It uses an in-process ADK runner and can perform real Elastic writeback when the checkbox is enabled, but it is not the final judge-facing UI.
+It has fixed mission buttons and a simulated progress timeline so short greetings do not trigger full agent missions.
 
 ## Immediate Build Priority
 
@@ -213,8 +218,8 @@ Do not add more scraped data yet. Do not create a big dashboard. Do not over-des
 
 Priority order:
 
-1. Replace `web_app.py` subprocess approach with an in-process backend runner.
-2. Produce structured mission output:
+1. Harden the `web_app.py` in-process backend runner and add streaming progress.
+2. Improve structured mission output:
    - denial summary
    - policy citations
    - medical evidence found
@@ -222,10 +227,12 @@ Priority order:
    - records request draft
    - advocate alert draft
    - packet summary
-3. Write generated artifacts back to Elastic:
+3. Improve generated artifact writeback to Elastic:
    - `evidence_gaps`
    - `appeal_packets`
    - `action_logs`
+   - show written document IDs in the UI
+   - keep writeback opt-in during testing to avoid clutter
 4. Build judge-readable UI:
    - case header
    - run analysis button
@@ -305,3 +312,5 @@ Analyze Maria -> stream/display mission steps -> show Elastic evidence -> show m
 ```
 
 The technical foundation is already strong. The winning gap is the judge-facing product experience.
+
+Do not turn this into a freeform chat UI. The product should feel like mission execution with explicit actions.
