@@ -317,8 +317,9 @@ Requirements:
 - Use dignity_get_maria_documents first.
 - Use dignity_search_case_documents for denial reason and medical evidence.
 - Use dignity_search_ssa_policy for fibromyalgia, symptom evaluation, RFC, and medical opinion rules.
-- Use dignity_search_ssa_forms for reconsideration, SSA-827, SSA-561, and representative/advocate workflow.
+{"" if mission == "analyze_denial" else """- Use dignity_search_ssa_forms for reconsideration, SSA-827, SSA-561, and representative/advocate workflow.
 - Use dignity_get_advocate_contact before drafting the advocate alert.
+- Use dignity_search_case_memory if asked about prior saved findings or advocate memory."""}
 - Cite real retrieved doc IDs and policy URLs where available.
 - Prefer HTTPS secure.ssa.gov URLs in citations. Do not output http://policy.ssa.gov URLs.
 - Say "possible missing evidence" if the record only implies a gap.
@@ -365,7 +366,7 @@ def event_to_action_logs(event: Any, mission_id: str) -> list[dict[str, Any]]:
                 "case_id": CASE_ID,
                 "mission_id": mission_id,
                 "event_type": "agent_final_response",
-                "tool_name": "dignity_machine",
+                "tool_name": getattr(event, "author", None) or "dignity_machine",
                 "index_name": "action_logs",
                 "input": {},
                 "output": {"text_preview": text[:2000]},
@@ -389,33 +390,10 @@ def infer_index_name(tool_name: str) -> str:
     return ""
 
 
-async def run_agent_in_process(query: str, mission: str) -> tuple[dict[str, Any], list[dict[str, Any]], str]:
-    session_id = stable_id("session")
-    mission_id = stable_id("mission")
-    await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=session_id)
-    message = types.Content(role="user", parts=[types.Part.from_text(text=mission_prompt(query, mission))])
-    final_text = ""
-    action_logs: list[dict[str, Any]] = []
-
-    async with runner_lock:
-        async for event in runner.run_async(user_id=USER_ID, session_id=session_id, new_message=message):
-            action_logs.extend(event_to_action_logs(event, mission_id))
-            if event.is_final_response():
-                final_text = as_plain_text(event)
-
-    structured = try_parse_agent_json(final_text)
-    if structured is None:
-        repair_text = await repair_agent_json(final_text)
-        structured = parse_agent_json(repair_text)
-    structured = normalize_structured_urls(structured)
-    structured["case_id"] = CASE_ID
-    structured["mission_id"] = mission_id
-    return structured, action_logs, mission_id
-
-
-async def repair_agent_json(bad_json_text: str) -> str:
+async def repair_agent_json(bad_json_text: str, active_runner: Runner | None = None) -> str:
+    repair_runner = active_runner or runner
     session_id = stable_id("repair_session")
-    await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=session_id)
+    await session_service.create_session(app_name=repair_runner.app_name, user_id=USER_ID, session_id=session_id)
     repair_prompt = f"""
 Convert the following malformed JSON-like text into valid JSON only.
 
@@ -433,7 +411,7 @@ Malformed text:
     message = types.Content(role="user", parts=[types.Part.from_text(text=repair_prompt)])
     final_text = ""
     async with runner_lock:
-        async for event in runner.run_async(user_id=USER_ID, session_id=session_id, new_message=message):
+        async for event in repair_runner.run_async(user_id=USER_ID, session_id=session_id, new_message=message):
             if event.is_final_response():
                 final_text = as_plain_text(event)
     return final_text
@@ -747,7 +725,7 @@ async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
             yield f"data: {json.dumps({'type': 'status', 'message': 'Connecting to agent...'})}\n\n"
             session_id = stable_id("session")
             mission_id = stable_id("mission")
-            await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=session_id)
+            await session_service.create_session(app_name=active_runner.app_name, user_id=USER_ID, session_id=session_id)
             msg = types.Content(role="user", parts=[types.Part.from_text(text=mission_prompt(query, mission))])
             final_text = ""
             action_logs: list[dict[str, Any]] = []
@@ -763,7 +741,7 @@ async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
             structured = try_parse_agent_json(final_text)
             if structured is None:
                 yield f"data: {json.dumps({'type': 'status', 'message': 'Reformatting output...'})}\n\n"
-                repair_text = await repair_agent_json(final_text)
+                repair_text = await repair_agent_json(final_text, active_runner)
                 structured = parse_agent_json(repair_text)
             structured = normalize_structured_urls(structured)
             structured["case_id"] = CASE_ID
@@ -831,6 +809,10 @@ async def send_advocate_alert(payload: AdvocateAlertRequest) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail="Advocate alert requires explicit approval (approved=true).")
     if payload.case_id != CASE_ID:
         raise HTTPException(status_code=404, detail=f"Case not found: {payload.case_id}")
+    twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
+    twilio_from = os.getenv("TWILIO_FROM_NUMBER")
+    creds_present = all([twilio_sid, twilio_token, twilio_from])
     log_entry: dict[str, Any] = {
         "event_id": stable_id("event"),
         "case_id": payload.case_id,
@@ -839,24 +821,24 @@ async def send_advocate_alert(payload: AdvocateAlertRequest) -> dict[str, Any]:
         "tool_name": "twilio_whatsapp",
         "index_name": "action_logs",
         "input": {"contact_id": payload.contact_id, "message_preview": payload.message[:200]},
-        "output": {"status": "pending_credentials"},
+        "output": {"status": "ready" if creds_present else "pending_credentials"},
         "created_at": now_iso(),
     }
+    log_written = True
     try:
         elastic_bulk({"action_logs": [log_entry]})
-    except Exception:
-        pass
-    twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
-    twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
-    twilio_from = os.getenv("TWILIO_FROM_NUMBER")
-    if not all([twilio_sid, twilio_token, twilio_from]):
+    except Exception as exc:
+        log_written = False
+        print(f"[WARN] Failed to write advocate-alert audit log to Elastic: {exc}")
+    if not creds_present:
         return {
             "status": "pending_configuration",
-            "message": "Alert approved and logged to Elastic. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER to .env to enable WhatsApp send.",
+            "message": "Alert approved" + (" and logged to Elastic." if log_written else " (Elastic log failed).") + " Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER to .env to enable WhatsApp send.",
             "case_id": payload.case_id,
             "contact_id": payload.contact_id,
+            "log_written": log_written,
         }
-    return {"status": "ready", "message": "Twilio credentials present. Send pending final implementation.", "case_id": payload.case_id}
+    return {"status": "ready", "message": "Twilio credentials present. Send pending final implementation.", "case_id": payload.case_id, "log_written": log_written}
 
 
 if __name__ == "__main__":

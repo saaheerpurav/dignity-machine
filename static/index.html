@@ -531,7 +531,7 @@
 </div>
 
 <script>
-  const STEPS = [
+  const STEPS_FULL = [
     { label: 'Inspect Case',   match: s => s.includes('get_maria_documents') },
     { label: 'Search Docs',    match: s => s.includes('search_case_documents') },
     { label: 'Search Policy',  match: s => s.includes('search_ssa_policy') },
@@ -539,6 +539,13 @@
     { label: 'Get Contact',    match: s => s.includes('advocate_contact') || s.includes('search_case_memory') },
     { label: 'Generate',       match: s => s.includes('final_response') || s === 'dignity_orchestrator' || s === 'denial_analyst' || s === 'dignity_machine' },
   ];
+  const STEPS_DENIAL = [
+    { label: 'Inspect Case',   match: s => s.includes('get_maria_documents') },
+    { label: 'Search Docs',    match: s => s.includes('search_case_documents') },
+    { label: 'Search Policy',  match: s => s.includes('search_ssa_policy') },
+    { label: 'Generate',       match: s => s.includes('final_response') || s === 'denial_analyst' || s === 'dignity_machine' },
+  ];
+  let STEPS = STEPS_FULL;
 
   let stepIdx = -1;
 
@@ -774,10 +781,11 @@
   }
 
   async function runMission(mission) {
+    STEPS = mission === 'analyze_denial' ? STEPS_DENIAL : STEPS_FULL;
     setButtonsDisabled(true);
     setStatus('Connecting to Gemini + Elastic...', true);
     el('resultArea').innerHTML = '';
-    el('tracePanel').innerHTML = '<div class="trace-empty">Connecting to agent...</div>';
+    el('tracePanel').innerHTML = '<div class="trace-empty" id="traceEmpty">Connecting to agent...</div>';
     el('writebackSection').classList.add('hidden');
     stepIdx = 0;
     renderTimeline();
@@ -887,6 +895,13 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Reset failed');
       setStatus('Reset complete: ' + JSON.stringify(data.deleted), false);
+      el('resultArea').innerHTML = '';
+      el('tracePanel').innerHTML = '<div class="trace-empty" id="traceEmpty">Tool calls will appear here as the agent runs.<br><br>Watch Elastic MCP tools fire in real time.</div>';
+      el('writebackSection').classList.add('hidden');
+      el('introCard').classList.remove('hidden');
+      stepIdx = -1;
+      STEPS = STEPS_FULL;
+      renderTimeline();
     } catch (e) {
       setStatus('Reset failed: ' + e.message, false);
     } finally {

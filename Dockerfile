@@ -12,4 +12,4 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["uvicorn", "web_app:app", "--host", "0.0.0.0", "--port", "8080", "--timeout-keep-alive", "300"]
+CMD ["sh", "-c", "exec uvicorn web_app:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 300"]
