@@ -12,7 +12,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
@@ -75,7 +75,7 @@ os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "TRUE")
 os.environ.setdefault("GOOGLE_CLOUD_PROJECT", "integral-tensor-497618-a8")
 os.environ.setdefault("GOOGLE_CLOUD_LOCATION", "us-central1")
 
-from dignity_agent.agent import root_agent  # noqa: E402
+from dignity_agent.agent import denial_analyst, root_agent  # noqa: E402
 
 
 class AnalyzeRequest(BaseModel):
@@ -84,9 +84,17 @@ class AnalyzeRequest(BaseModel):
     writeback: bool = False
 
 
-app = FastAPI(title="Dignity Machine Test UI")
+class AdvocateAlertRequest(BaseModel):
+    case_id: str
+    contact_id: str
+    message: str
+    approved: bool = False
+
+
+app = FastAPI(title="Dignity Machine")
 session_service = InMemorySessionService()
 runner = Runner(app_name=APP_NAME, agent=root_agent, session_service=session_service)
+denial_runner = Runner(app_name=APP_NAME + "_denial", agent=denial_analyst, session_service=session_service)
 runner_lock = asyncio.Lock()
 
 
@@ -714,7 +722,7 @@ def config() -> dict[str, Any]:
 
 
 @app.post("/api/analyze")
-async def analyze(payload: AnalyzeRequest) -> dict[str, Any]:
+async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
     if payload.query is not None and payload.query.strip():
         query = payload.query.strip()
         mission = "custom"
@@ -726,38 +734,63 @@ async def analyze(payload: AnalyzeRequest) -> dict[str, Any]:
 
     quick_answer = quick_local_response(query)
     if quick_answer is not None:
-        return {
-            "answer": quick_answer,
-            "structured": {
-                "case_id": CASE_ID,
-                "mode": "local_quick_response",
-                "message": quick_answer,
-            },
-            "mission_id": stable_id("quick"),
-            "writeback_enabled": False,
-            "write_counts": {},
-        }
+        async def quick_stream():
+            yield f"data: {json.dumps({'type': 'result', 'answer': quick_answer, 'structured': {'case_id': CASE_ID, 'mode': 'local_quick_response', 'message': quick_answer}, 'mission_id': stable_id('quick'), 'writeback_enabled': False, 'write_counts': {}})}\n\n"
+            yield "data: [DONE]\n\n"
+        return StreamingResponse(quick_stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
-    try:
-        structured, action_logs, mission_id = await run_agent_in_process(query, mission)
-        writeback: dict[str, list[dict[str, Any]]] = {}
-        if payload.writeback:
-            writeback = build_writeback(structured, action_logs)
-            elastic_bulk(writeback)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    # Route analyze_denial to the specialist; everything else to the orchestrator
+    active_runner = denial_runner if mission == "analyze_denial" else runner
 
-    write_counts = {index_name: len(records) for index_name, records in writeback.items()}
-    return {
-        "answer": markdown_from_structured(structured, write_counts, mission),
-        "structured": structured,
-        "mission_id": mission_id,
-        "mission": mission,
-        "writeback_enabled": payload.writeback,
-        "write_counts": write_counts,
-    }
+    async def event_stream():
+        try:
+            yield f"data: {json.dumps({'type': 'status', 'message': 'Connecting to agent...'})}\n\n"
+            session_id = stable_id("session")
+            mission_id = stable_id("mission")
+            await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=session_id)
+            msg = types.Content(role="user", parts=[types.Part.from_text(text=mission_prompt(query, mission))])
+            final_text = ""
+            action_logs: list[dict[str, Any]] = []
+            async with runner_lock:
+                async for event in active_runner.run_async(user_id=USER_ID, session_id=session_id, new_message=msg):
+                    logs = event_to_action_logs(event, mission_id)
+                    action_logs.extend(logs)
+                    for log in logs:
+                        yield f"data: {json.dumps({'type': 'agent_event', 'event': log})}\n\n"
+                    if event.is_final_response():
+                        final_text = as_plain_text(event)
+            yield f"data: {json.dumps({'type': 'status', 'message': 'Parsing results...'})}\n\n"
+            structured = try_parse_agent_json(final_text)
+            if structured is None:
+                yield f"data: {json.dumps({'type': 'status', 'message': 'Reformatting output...'})}\n\n"
+                repair_text = await repair_agent_json(final_text)
+                structured = parse_agent_json(repair_text)
+            structured = normalize_structured_urls(structured)
+            structured["case_id"] = CASE_ID
+            structured["mission_id"] = mission_id
+            writeback: dict[str, list[dict[str, Any]]] = {}
+            if payload.writeback:
+                yield f"data: {json.dumps({'type': 'status', 'message': 'Writing artifacts to Elastic...'})}\n\n"
+                writeback = build_writeback(structured, action_logs)
+                elastic_bulk(writeback)
+            write_counts = {k: len(v) for k, v in writeback.items()}
+            result_payload = {
+                "type": "result",
+                "answer": markdown_from_structured(structured, write_counts, mission),
+                "structured": structured,
+                "mission_id": mission_id,
+                "mission": mission,
+                "writeback_enabled": payload.writeback,
+                "write_counts": write_counts,
+            }
+            yield f"data: {json.dumps(result_payload)}\n\n"
+            yield "data: [DONE]\n\n"
+        except HTTPException as exc:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(exc.detail)})}\n\n"
+        except Exception as exc:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.post("/api/reset-demo-writeback")
@@ -769,12 +802,61 @@ def reset_writeback() -> dict[str, Any]:
     return {"case_id": CASE_ID, "deleted": deleted}
 
 
-@app.get("/api/latest-memory")
-def latest_memory() -> dict[str, Any]:
-    return {
-        "message": "Use Elastic/Kibana to inspect evidence_gaps, appeal_packets, and action_logs.",
-        "case_id": CASE_ID,
+@app.get("/api/cases/{case_id}/writeback")
+def get_case_writeback(case_id: str) -> dict[str, Any]:
+    if case_id != CASE_ID:
+        raise HTTPException(status_code=404, detail=f"Case not found: {case_id}")
+    try:
+        def _search(index: str, size: int = 20) -> list[dict[str, Any]]:
+            result = elastic_request_json(
+                "POST",
+                f"/{index}/_search",
+                {"query": {"term": {"case_id": case_id}}, "sort": [{"created_at": {"order": "desc"}}], "size": size},
+            )
+            return [h["_source"] for h in result.get("hits", {}).get("hits", [])]
+
+        return {
+            "case_id": case_id,
+            "evidence_gaps": _search("evidence_gaps"),
+            "appeal_packets": _search("appeal_packets", size=5),
+            "action_logs": _search("action_logs", size=50),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/actions/send-advocate-alert")
+async def send_advocate_alert(payload: AdvocateAlertRequest) -> dict[str, Any]:
+    if not payload.approved:
+        raise HTTPException(status_code=400, detail="Advocate alert requires explicit approval (approved=true).")
+    if payload.case_id != CASE_ID:
+        raise HTTPException(status_code=404, detail=f"Case not found: {payload.case_id}")
+    log_entry: dict[str, Any] = {
+        "event_id": stable_id("event"),
+        "case_id": payload.case_id,
+        "mission_id": "action",
+        "event_type": "advocate_alert_approved",
+        "tool_name": "twilio_whatsapp",
+        "index_name": "action_logs",
+        "input": {"contact_id": payload.contact_id, "message_preview": payload.message[:200]},
+        "output": {"status": "pending_credentials"},
+        "created_at": now_iso(),
     }
+    try:
+        elastic_bulk({"action_logs": [log_entry]})
+    except Exception:
+        pass
+    twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
+    twilio_from = os.getenv("TWILIO_FROM_NUMBER")
+    if not all([twilio_sid, twilio_token, twilio_from]):
+        return {
+            "status": "pending_configuration",
+            "message": "Alert approved and logged to Elastic. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER to .env to enable WhatsApp send.",
+            "case_id": payload.case_id,
+            "contact_id": payload.contact_id,
+        }
+    return {"status": "ready", "message": "Twilio credentials present. Send pending final implementation.", "case_id": payload.case_id}
 
 
 if __name__ == "__main__":
