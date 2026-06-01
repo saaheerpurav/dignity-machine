@@ -3,268 +3,899 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dignity Machine Test UI</title>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <title>Dignity Machine — Disability Denial Appeal Preparation</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
     :root {
-      color-scheme: light;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #f4f6f8;
-      color: #17202a;
+      --teal: #0f766e;
+      --teal-hover: #0d6760;
+      --teal-light: #ccfbf1;
+      --teal-dark: #064e3b;
+      --teal-mid: #14b8a6;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --red-border: #fca5a5;
+      --amber: #d97706;
+      --amber-light: #fffbeb;
+      --amber-border: #fde68a;
+      --green: #16a34a;
+      --green-light: #f0fdf4;
+      --green-border: #86efac;
+      --blue: #2563eb;
+      --blue-light: #eff6ff;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+      --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+      --radius: 8px;
     }
-    body { margin: 0; padding: 24px; }
-    main { max-width: 1020px; margin: 0 auto; }
-    header { margin-bottom: 18px; }
-    h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: 0; }
-    p { margin: 0; color: #4b5563; line-height: 1.45; }
-    section {
-      background: #ffffff;
-      border: 1px solid #d7dde4;
-      border-radius: 8px;
-      padding: 16px;
-      margin: 14px 0;
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
     }
-    button {
-      border: 0;
-      border-radius: 6px;
-      padding: 10px 14px;
-      background: #0f766e;
-      color: #ffffff;
+
+    /* ─── APP HEADER ──────────────────────────────────────────── */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand-row { display: flex; align-items: center; gap: 10px; }
+    .brand { font-size: 17px; font-weight: 800; color: var(--teal); letter-spacing: -0.3px; }
+    .brand-pill {
+      background: var(--teal-light);
+      color: var(--teal-dark);
+      font-size: 10px;
       font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .header-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .tech-stack {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .tech-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      background: var(--bg);
+    }
+
+    /* ─── CASE BANNER ──────────────────────────────────────────── */
+    .case-banner {
+      background: var(--teal);
+      color: white;
+      padding: 14px 24px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .case-story {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .case-detail {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+    .case-badges-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .cb {
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* ─── INTRO CARD (shown before first mission) ─────────────── */
+    .intro-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--teal);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .intro-card strong { color: var(--text); }
+
+    /* ─── MAIN LAYOUT ──────────────────────────────────────────── */
+    .main-wrap { display: flex; gap: 0; min-height: calc(100vh - 110px); }
+    .content { flex: 1; padding: 20px 24px; min-width: 0; overflow-y: auto; }
+    .sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      padding: 16px;
+      overflow-y: auto;
+      position: sticky;
+      top: 57px;
+      max-height: calc(100vh - 57px);
+    }
+
+    /* ─── PANELS / CARDS ──────────────────────────────────────── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .panel-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin: 0 0 12px;
+    }
+
+    /* ─── MISSIONS ────────────────────────────────────────────── */
+    .missions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .mission-btn {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 6px;
       cursor: pointer;
       text-align: left;
+      transition: border-color .15s, background .15s;
+      width: 100%;
     }
-    button.danger { background: #b42318; }
-    button:disabled { opacity: 0.6; cursor: wait; }
-    .meta, .missions, .timeline {
-      display: grid;
-      gap: 8px;
-    }
-    .meta {
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      margin-top: 12px;
-    }
-    .missions {
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    }
-    .mission {
-      display: block;
-      min-height: 74px;
-    }
-    .mission span {
-      display: block;
-      color: #d9fffb;
-      font-size: 12px;
-      font-weight: 400;
-      margin-top: 4px;
-      line-height: 1.35;
-    }
-    .pill, .step {
-      border: 1px solid #d7dde4;
-      border-radius: 6px;
-      padding: 8px;
-      background: #f8fafc;
-      font-size: 13px;
-      color: #334155;
-    }
-    .row {
+    .mission-btn:hover:not(:disabled) { border-color: var(--teal); background: #f0fdfa; }
+    .mission-btn.running { border-color: var(--teal); background: #f0fdfa; }
+    .mission-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .m-num {
+      background: var(--teal);
+      color: white;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
       display: flex;
-      gap: 12px;
       align-items: center;
-      flex-wrap: wrap;
-      margin-top: 12px;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+      margin-top: 1px;
     }
-    .check {
-      display: inline-flex;
+    .m-title { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.3; }
+    .m-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.35; }
+
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .check-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .btn-danger {
+      padding: 6px 12px;
+      background: none;
+      border: 1px solid var(--red-border);
+      border-radius: 4px;
+      color: var(--red);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-danger:hover { background: var(--red-light); }
+    .status-line {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      min-height: 18px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .spinner {
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--teal-light);
+      border-top-color: var(--teal);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── TIMELINE ────────────────────────────────────────────── */
+    .timeline-row {
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .tl-step { display: flex; align-items: center; flex-shrink: 0; }
+    .tl-inner { display: flex; flex-direction: column; align-items: center; }
+    .tl-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid var(--border-strong);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      transition: all .2s;
+    }
+    .tl-dot.done { border-color: var(--teal); background: var(--teal-light); color: var(--teal-dark); }
+    .tl-dot.active { border-color: var(--teal); background: var(--teal); color: white; animation: pulse-dot 1.2s ease-in-out infinite; }
+    @keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 0 rgba(15,118,110,.4); } 50% { box-shadow: 0 0 0 6px rgba(15,118,110,0); } }
+    .tl-label { font-size: 9px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; text-align: center; }
+    .tl-dot.active + .tl-label, .tl-dot.done + .tl-label { color: var(--teal-dark); }
+    .tl-connector { flex: 1; height: 2px; background: var(--border); min-width: 12px; margin-bottom: 16px; transition: background .3s; }
+    .tl-connector.done { background: var(--teal-mid); }
+
+    /* ─── RESULT SECTIONS ─────────────────────────────────────── */
+    .result-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+    .sec-header {
+      display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 14px;
-      color: #334155;
+      margin-bottom: 12px;
     }
-    .status {
-      font-size: 13px;
-      color: #4b5563;
-      margin-top: 10px;
-    }
-    .timeline {
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    }
-    .step.active {
-      border-color: #0f766e;
-      background: #ecfdf5;
-      color: #064e3b;
+    .sec-title { font-size: 14px; font-weight: 700; color: var(--text); margin: 0; }
+    .sec-count {
+      background: var(--teal-light);
+      color: var(--teal-dark);
+      font-size: 11px;
       font-weight: 700;
+      padding: 1px 8px;
+      border-radius: 999px;
     }
-    .step.done {
-      border-color: #99d6c8;
-      background: #f0fdfa;
+
+    /* Denial summary */
+    .denial-box {
+      background: var(--amber-light);
+      border-left: 3px solid var(--amber);
+      border-radius: 4px;
+      padding: 12px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
     }
-    #answer { min-height: 160px; line-height: 1.5; }
-    #answer h1, #answer h2, #answer h3 { margin: 16px 0 8px; letter-spacing: 0; }
-    #answer h1 { font-size: 24px; }
-    #answer h2 { font-size: 20px; }
-    #answer h3 { font-size: 17px; }
-    #answer p { margin: 8px 0; color: #17202a; }
-    #answer ul, #answer ol { padding-left: 24px; }
-    #answer code { background: #eef2f7; border-radius: 4px; padding: 2px 4px; }
+
+    /* Missing evidence */
+    .gap-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+    .gap-card.high { border-left: 3px solid var(--red); }
+    .gap-card.medium { border-left: 3px solid var(--amber); }
+    .gap-card.low { border-left: 3px solid var(--text-light); }
+    .gap-header { display: flex; align-items: center; gap: 6px; }
+    .gap-icon { font-size: 14px; }
+    .gap-type { font-size: 13px; font-weight: 700; color: var(--text); }
+    .gap-conf { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: var(--amber-light); color: var(--amber); border: 1px solid var(--amber-border); }
+    .gap-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+    .gap-why { font-size: 11px; background: var(--teal-light); color: var(--teal-dark); padding: 4px 8px; border-radius: 4px; margin-top: 6px; line-height: 1.5; }
+
+    /* Policy citations */
+    .cite-row { padding: 8px 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 10px; }
+    .cite-row:last-child { border-bottom: none; }
+    .cite-badge { font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 3px; background: var(--blue-light); color: var(--blue); flex-shrink: 0; margin-top: 2px; white-space: nowrap; }
+    .cite-body { flex: 1; min-width: 0; }
+    .cite-link { font-size: 13px; font-weight: 600; color: var(--teal); text-decoration: none; }
+    .cite-link:hover { text-decoration: underline; }
+    .cite-why { font-size: 12px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+
+    /* Medical evidence */
+    .med-row { padding: 8px 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 10px; }
+    .med-row:last-child { border-bottom: none; }
+    .doc-id { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); flex-shrink: 0; font-family: monospace; }
+    .med-finding { font-size: 12px; color: var(--text); line-height: 1.5; }
+
+    /* Draft sections */
+    .draft-pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px;
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .draft-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .btn-primary {
+      padding: 7px 14px;
+      background: var(--teal);
+      border: none;
+      border-radius: 4px;
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary:hover { background: var(--teal-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-outline {
+      padding: 7px 12px;
+      background: none;
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .approval-wrap { margin-top: 10px; padding: 10px 12px; background: var(--amber-light); border-radius: 4px; border: 1px solid var(--amber-border); }
+    .approval-note { font-size: 11px; color: var(--amber); margin-top: 6px; }
+
+    /* Next actions */
+    .action-row { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .action-row:last-child { border-bottom: none; }
+    .action-n { font-size: 11px; font-weight: 700; color: var(--teal); min-width: 18px; flex-shrink: 0; }
+
+    /* ─── SIDEBAR TRACE ───────────────────────────────────────── */
+    .sidebar-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin: 0 0 10px;
+    }
+    .trace-empty { font-size: 12px; color: var(--text-light); text-align: center; padding: 24px 8px; line-height: 1.6; }
+    .trace-entry {
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+    .trace-type {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-bottom: 4px;
+    }
+    .trace-type.tool_call { background: var(--blue-light); color: var(--blue); }
+    .trace-type.tool_result { background: var(--green-light); color: var(--green); }
+    .trace-type.agent_final_response { background: var(--teal-light); color: var(--teal-dark); }
+    .trace-type.writeback_prepared { background: var(--amber-light); color: var(--amber); }
+    .trace-tool { font-weight: 600; color: var(--text); font-size: 11px; }
+    .trace-index { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+    .writeback-section { margin-top: 20px; }
+    .wb-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+    .wb-row:last-child { border-bottom: none; }
+    .wb-index { font-family: monospace; color: var(--teal-dark); }
+    .wb-count { font-weight: 700; }
+
+    /* ─── RESPONSIVE ──────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .main-wrap { flex-direction: column; }
+      .sidebar { width: 100%; position: static; max-height: none; border-left: none; border-top: 1px solid var(--border); }
+      .missions-grid { grid-template-columns: 1fr; }
+    }
+
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>Dignity Machine Test UI</h1>
-      <p>Mission buttons for the ADK/Gemini agent connected to Elastic MCP. No caching: each mission runs live.</p>
-      <div class="meta">
-        <div class="pill" id="casePill">Case: loading</div>
-        <div class="pill" id="projectPill">Project: loading</div>
-        <div class="pill">Writeback: optional</div>
-      </div>
-    </header>
 
-    <section>
-      <div class="missions" id="missions"></div>
-      <div class="row">
-        <label class="check">
-          <input id="writeback" type="checkbox">
-          Write generated artifacts to Elastic
+<header class="app-header">
+  <div class="brand-row">
+    <span class="brand">Dignity Machine</span>
+    <span class="brand-pill">Hackathon Demo</span>
+  </div>
+  <span class="header-desc">AI-powered disability denial appeal preparation</span>
+  <div class="tech-stack">
+    <span class="tech-badge">Gemini 2.5 Flash</span>
+    <span class="tech-badge">Google ADK</span>
+    <span class="tech-badge">Elastic MCP</span>
+    <span class="tech-badge">Vertex AI</span>
+  </div>
+</header>
+
+<div class="case-banner">
+  <div>
+    <div class="case-story">Maria Lopez was denied disability benefits for fibromyalgia.</div>
+    <div class="case-detail">Dignity Machine finds the missing evidence and prepares an advocate-ready packet — grounded in real SSA policy and real Elastic retrieval.</div>
+  </div>
+  <div class="case-badges-row">
+    <span class="cb" id="caseIdBadge">Case: loading...</span>
+    <span class="cb" id="gcpBadge">GCP: loading...</span>
+    <span class="cb">Stage: Reconsideration</span>
+    <span class="cb">Elastic: Connected</span>
+  </div>
+</div>
+
+<div class="main-wrap">
+  <div class="content">
+
+    <div class="intro-card" id="introCard">
+      <strong>How this works:</strong> Select a mission below. A real Gemini 2.5 Flash agent will call
+      6 Elastic MCP tools — searching 168 SSA policy chunks, 105 form guidance chunks, and Maria's 8 case documents —
+      then generate a structured evidence packet. No cached responses. Every run is live.
+      <br><br>
+      <strong>Two-agent architecture:</strong> <em>denial_analyst</em> reads the denial notice;
+      <em>dignity_orchestrator</em> coordinates evidence retrieval and packet drafting.
+    </div>
+
+    <!-- Mission selector -->
+    <div class="panel">
+      <div class="panel-title">Select Mission</div>
+      <div class="missions-grid" id="missionsGrid"></div>
+      <div class="controls-row">
+        <label class="check-label">
+          <input type="checkbox" id="writebackCheck">
+          Write artifacts to Elastic
         </label>
-        <button id="reset" class="danger" type="button">Reset demo writeback</button>
+        <button class="btn-danger" id="resetBtn">Reset demo data</button>
       </div>
-      <p class="status" id="status">Ready.</p>
-    </section>
+      <div class="status-line" id="statusLine">
+        Choose a mission above to begin.
+      </div>
+    </div>
 
-    <section>
-      <div class="timeline" id="timeline"></div>
-    </section>
+    <!-- Progress timeline -->
+    <div class="panel">
+      <div class="panel-title">Agent Progress</div>
+      <div class="timeline-row" id="timelineRow"></div>
+    </div>
 
-    <section>
-      <label>Output</label>
-      <div id="answer">Choose a mission.</div>
-    </section>
-  </main>
+    <!-- Results -->
+    <div id="resultArea"></div>
 
-  <script>
-    const missions = document.getElementById('missions');
-    const reset = document.getElementById('reset');
-    const answer = document.getElementById('answer');
-    const status = document.getElementById('status');
-    const writeback = document.getElementById('writeback');
-    const casePill = document.getElementById('casePill');
-    const projectPill = document.getElementById('projectPill');
-    const timeline = document.getElementById('timeline');
+  </div>
 
-    const stages = [
-      'Inspect case packet',
-      'Search case documents',
-      'Search SSA policy',
-      'Search appeal forms',
-      'Get advocate contact',
-      'Generate packet'
-    ];
-    let progressTimer = null;
-    let activeStage = 0;
+  <div class="sidebar">
+    <div class="sidebar-title">Agent Trace</div>
+    <div id="tracePanel">
+      <div class="trace-empty" id="traceEmpty">
+        Tool calls will appear here as the agent runs.<br><br>
+        Watch Elastic MCP tools fire in real time.
+      </div>
+    </div>
+    <div class="writeback-section hidden" id="writebackSection">
+      <div class="sidebar-title" style="margin-top:0">Elastic Writeback</div>
+      <div id="writebackContent"></div>
+    </div>
+  </div>
+</div>
 
-    marked.setOptions({ breaks: true, gfm: true });
+<script>
+  const STEPS = [
+    { label: 'Inspect Case',   match: s => s.includes('get_maria_documents') },
+    { label: 'Search Docs',    match: s => s.includes('search_case_documents') },
+    { label: 'Search Policy',  match: s => s.includes('search_ssa_policy') },
+    { label: 'Search Forms',   match: s => s.includes('search_ssa_forms') },
+    { label: 'Get Contact',    match: s => s.includes('advocate_contact') || s.includes('search_case_memory') },
+    { label: 'Generate',       match: s => s.includes('final_response') || s === 'dignity_orchestrator' || s === 'denial_analyst' || s === 'dignity_machine' },
+  ];
 
-    function renderTimeline() {
-      timeline.innerHTML = stages.map((stage, index) => {
-        const cls = index < activeStage ? 'done' : index === activeStage ? 'active' : '';
-        return `<div class="step ${cls}">${index + 1}. ${stage}</div>`;
+  let stepIdx = -1;
+
+  function el(id) { return document.getElementById(id); }
+
+  function renderTimeline() {
+    const row = el('timelineRow');
+    row.innerHTML = STEPS.map((step, i) => {
+      let cls = '';
+      if (i < stepIdx) cls = 'done';
+      else if (i === stepIdx) cls = 'active';
+      const dot = cls === 'done' ? '✓' : i + 1;
+      const lineClass = i < stepIdx ? 'done' : '';
+      const connector = i < STEPS.length - 1
+        ? `<div class="tl-connector ${lineClass}"></div>`
+        : '';
+      return `
+        <div class="tl-step">
+          <div class="tl-inner">
+            <div class="tl-dot ${cls}">${dot}</div>
+            <div class="tl-label">${step.label}</div>
+          </div>
+        </div>
+        ${connector}
+      `;
+    }).join('');
+  }
+
+  function advanceByTool(toolName) {
+    if (!toolName) return;
+    for (let i = STEPS.length - 1; i >= 0; i--) {
+      if (STEPS[i].match(toolName)) {
+        if (i > stepIdx) { stepIdx = i; renderTimeline(); }
+        return;
+      }
+    }
+    if (stepIdx < STEPS.length - 2) { stepIdx++; renderTimeline(); }
+  }
+
+  function finishTimeline() {
+    stepIdx = STEPS.length;
+    renderTimeline();
+  }
+
+  function setStatus(msg, spinning) {
+    const line = el('statusLine');
+    if (spinning) {
+      line.innerHTML = `<div class="spinner"></div><span>${escHtml(msg)}</span>`;
+    } else {
+      line.textContent = msg;
+    }
+  }
+
+  function setButtonsDisabled(disabled) {
+    document.querySelectorAll('.mission-btn, #resetBtn').forEach(b => b.disabled = disabled);
+  }
+
+  function addTrace(event) {
+    const tp = el('tracePanel');
+    const te = el('traceEmpty');
+    if (te) te.remove();
+    const type = event.event_type || 'event';
+    const tool = event.tool_name || '';
+    const idx = event.index_name || '';
+    const div = document.createElement('div');
+    div.className = 'trace-entry';
+    div.innerHTML = `
+      <span class="trace-type ${escHtml(type)}">${escHtml(type.replace(/_/g, ' '))}</span>
+      <div class="trace-tool">${escHtml(tool)}</div>
+      ${idx ? `<div class="trace-index">→ ${escHtml(idx)}</div>` : ''}
+    `;
+    tp.appendChild(div);
+    tp.scrollTop = tp.scrollHeight;
+  }
+
+  function showWriteback(writeCounts) {
+    if (!writeCounts || !Object.keys(writeCounts).length) return;
+    el('writebackSection').classList.remove('hidden');
+    el('writebackContent').innerHTML = Object.entries(writeCounts)
+      .filter(([, n]) => n > 0)
+      .map(([idx, n]) => `<div class="wb-row"><span class="wb-index">${escHtml(idx)}</span><span class="wb-count">${n} doc${n !== 1 ? 's' : ''}</span></div>`)
+      .join('');
+  }
+
+  function renderResults(structured, mission) {
+    const area = el('resultArea');
+    area.innerHTML = '';
+    el('introCard').classList.add('hidden');
+
+    const { denial_summary, policy_citations = [], medical_evidence = [], missing_evidence = [],
+            records_request_draft = '', advocate_alert_draft = '', packet_summary = '',
+            next_actions = [] } = structured;
+
+    if (denial_summary) {
+      area.appendChild(makeSection('Denial Summary', null,
+        `<div class="denial-box">${escHtml(denial_summary)}</div>`));
+    }
+
+    if (missing_evidence.length) {
+      const html = missing_evidence.map(gap => {
+        const conf = gap.confidence != null ? Math.round(gap.confidence * 100) : null;
+        const sev = gap.confidence >= 0.8 ? 'high' : gap.confidence >= 0.5 ? 'medium' : 'low';
+        const icon = sev === 'high' ? '⚠' : sev === 'medium' ? '◎' : '○';
+        return `
+          <div class="gap-card ${sev}">
+            <div class="gap-header">
+              <span class="gap-icon">${icon}</span>
+              <span class="gap-type">${escHtml(gap.gap_type || 'Missing Evidence')}</span>
+              ${conf != null ? `<span class="gap-conf">${conf}%</span>` : ''}
+            </div>
+            <div class="gap-desc">${escHtml(gap.description || '')}</div>
+            ${gap.why_it_matters ? `<div class="gap-why">${escHtml(gap.why_it_matters)}</div>` : ''}
+          </div>
+        `;
       }).join('');
+      area.appendChild(makeSection('Missing Evidence', `${missing_evidence.length} gap${missing_evidence.length !== 1 ? 's' : ''}`, html));
     }
 
-    function startProgress() {
-      activeStage = 0;
-      renderTimeline();
-      clearInterval(progressTimer);
-      progressTimer = setInterval(() => {
-        if (activeStage < stages.length - 1) {
-          activeStage += 1;
-          renderTimeline();
-        }
-      }, 4500);
+    if (policy_citations.length) {
+      const html = policy_citations.map(c => {
+        const title = c.title || c.doc_id || 'Policy';
+        const url = c.url;
+        return `
+          <div class="cite-row">
+            <span class="cite-badge">POMS</span>
+            <div class="cite-body">
+              ${url
+                ? `<a class="cite-link" href="${escAttr(url)}" target="_blank" rel="noopener noreferrer">${escHtml(title)}</a>`
+                : `<span class="cite-link">${escHtml(title)}</span>`}
+              ${c.why_it_matters ? `<div class="cite-why">${escHtml(c.why_it_matters)}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+      area.appendChild(makeSection('Policy Citations', `${policy_citations.length}`, html));
     }
 
-    function finishProgress() {
-      clearInterval(progressTimer);
-      activeStage = stages.length;
-      timeline.innerHTML = stages.map((stage, index) =>
-        `<div class="step done">${index + 1}. ${stage}</div>`
-      ).join('');
-    }
-
-    function setButtonsDisabled(disabled) {
-      document.querySelectorAll('button').forEach((button) => {
-        button.disabled = disabled;
-      });
-    }
-
-    async function loadConfig() {
-      const response = await fetch('/api/config');
-      const config = await response.json();
-      writeback.checked = Boolean(config.writeback_default);
-      casePill.textContent = 'Case: ' + config.case_id;
-      projectPill.textContent = 'Project: ' + config.gcp_project;
-      missions.innerHTML = config.missions.map((mission) => `
-        <button class="mission" data-mission="${mission.id}">
-          ${mission.label}
-          <span>${mission.description}</span>
-        </button>
+    if (medical_evidence.length) {
+      const html = medical_evidence.map(e => `
+        <div class="med-row">
+          <span class="doc-id">${escHtml(e.doc_id || 'doc')}</span>
+          <span class="med-finding">${escHtml(e.finding || '')}</span>
+        </div>
       `).join('');
-      missions.querySelectorAll('button').forEach((button) => {
-        button.addEventListener('click', () => runMission(button.dataset.mission));
+      area.appendChild(makeSection('Medical Evidence Found', `${medical_evidence.length} document${medical_evidence.length !== 1 ? 's' : ''}`, html));
+    }
+
+    const rr = (records_request_draft || '').trim();
+    if (rr) {
+      const sec = makeSection('Records Request Draft', null, `
+        <div class="draft-pre" id="rrDraft">${escHtml(rr)}</div>
+        <div class="draft-actions">
+          <button class="btn-primary" onclick="copyText('rrDraft')">Copy to clipboard</button>
+          <span style="font-size:11px;color:var(--text-muted)">Review with your advocate before sending.</span>
+        </div>
+      `);
+      area.appendChild(sec);
+    }
+
+    const aa = (advocate_alert_draft || '').trim();
+    if (aa) {
+      const caseId = escAttr(structured.case_id || '');
+      const sec = makeSection('Advocate Alert Draft', null, `
+        <div class="draft-pre" id="alertDraft">${escHtml(aa)}</div>
+        <div class="approval-wrap">
+          <label class="check-label" style="font-size:12px;color:var(--amber);">
+            <input type="checkbox" id="approveAlert"> I have reviewed this message and approve sending it.
+          </label>
+          <div class="approval-note">Human approval required before any message is sent to Elena Lopez (advocate).</div>
+          <div class="draft-actions" style="margin-top:8px;">
+            <button class="btn-primary" onclick="sendAlert('${caseId}')">Send via WhatsApp</button>
+          </div>
+        </div>
+      `);
+      area.appendChild(sec);
+    }
+
+    const ps = (packet_summary || '').trim();
+    if (ps) {
+      area.appendChild(makeSection('Advocate Packet Summary', null,
+        `<div style="font-size:13px;color:var(--text);line-height:1.6;">${escHtml(ps)}</div>`));
+    }
+
+    if (next_actions.length) {
+      const html = next_actions.map((a, i) => `
+        <div class="action-row">
+          <span class="action-n">${i + 1}.</span>
+          <span>${escHtml(String(a))}</span>
+        </div>
+      `).join('');
+      area.appendChild(makeSection('Recommended Next Actions', `${next_actions.length}`, html));
+    }
+  }
+
+  function makeSection(title, badge, innerHtml) {
+    const div = document.createElement('div');
+    div.className = 'result-section';
+    div.innerHTML = `
+      <div class="sec-header">
+        <h3 class="sec-title">${escHtml(title)}</h3>
+        ${badge ? `<span class="sec-count">${escHtml(badge)}</span>` : ''}
+      </div>
+      ${innerHtml}
+    `;
+    return div;
+  }
+
+  function copyText(id) {
+    const node = el(id);
+    if (!node) return;
+    navigator.clipboard.writeText(node.textContent).then(() => setStatus('Copied to clipboard.', false));
+  }
+
+  async function sendAlert(caseId) {
+    const approveEl = el('approveAlert');
+    if (!approveEl || !approveEl.checked) {
+      alert('Please check the approval box before sending.');
+      return;
+    }
+    const draftEl = el('alertDraft');
+    const message = draftEl ? draftEl.textContent : '';
+    try {
+      const res = await fetch('/api/actions/send-advocate-alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ case_id: caseId, contact_id: 'elena_lopez', message, approved: true }),
       });
-      renderTimeline();
+      const data = await res.json();
+      alert(data.message || 'Done.');
+    } catch (e) {
+      alert('Failed: ' + e.message);
     }
+  }
 
-    async function runMission(mission) {
-      setButtonsDisabled(true);
-      status.textContent = writeback.checked
-        ? 'Running live mission with Elastic writeback...'
-        : 'Running live preview mission without Elastic writeback...';
-      answer.textContent = 'Working. Progress is shown above while the live agent runs.';
-      startProgress();
-      try {
-        const response = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mission, writeback: writeback.checked })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || 'Request failed');
-        answer.innerHTML = marked.parse(data.answer || '');
-        finishProgress();
-        status.textContent = data.writeback_enabled
-          ? 'Done. Artifacts were written to Elastic.'
-          : 'Done. Preview only; no Elastic writeback.';
-      } catch (error) {
-        clearInterval(progressTimer);
-        answer.textContent = 'Error: ' + error.message;
-        status.textContent = 'Failed.';
-      } finally {
-        setButtonsDisabled(false);
-      }
-    }
+  async function runMission(mission) {
+    setButtonsDisabled(true);
+    setStatus('Connecting to Gemini + Elastic...', true);
+    el('resultArea').innerHTML = '';
+    el('tracePanel').innerHTML = '<div class="trace-empty">Connecting to agent...</div>';
+    el('writebackSection').classList.add('hidden');
+    stepIdx = 0;
+    renderTimeline();
 
-    reset.addEventListener('click', async () => {
-      if (!confirm('Delete generated demo artifacts from evidence_gaps, appeal_packets, and action_logs?')) return;
-      setButtonsDisabled(true);
-      status.textContent = 'Resetting demo writeback...';
-      try {
-        const response = await fetch('/api/reset-demo-writeback', { method: 'POST' });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || 'Reset failed');
-        status.textContent = 'Deleted writeback docs: ' + JSON.stringify(data.deleted);
-      } catch (error) {
-        status.textContent = 'Reset failed: ' + error.message;
-      } finally {
-        setButtonsDisabled(false);
-      }
+    document.querySelectorAll('.mission-btn').forEach(b => {
+      b.classList.toggle('running', b.dataset.mission === mission);
     });
 
-    loadConfig().catch((error) => {
-      status.textContent = 'Config load failed: ' + error.message;
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mission, writeback: el('writebackCheck').checked }),
+      });
+
+      if (!res.body) throw new Error(`HTTP ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nl;
+        while ((nl = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (raw === '[DONE]') { finishTimeline(); continue; }
+          let evt;
+          try { evt = JSON.parse(raw); } catch { continue; }
+          handleEvent(evt);
+        }
+      }
+    } catch (err) {
+      el('resultArea').innerHTML = `<div class="result-section"><div style="color:var(--red);font-size:13px;">Error: ${escHtml(err.message)}</div></div>`;
+      setStatus('Mission failed.', false);
+    } finally {
+      setButtonsDisabled(false);
+      document.querySelectorAll('.mission-btn').forEach(b => b.classList.remove('running'));
+    }
+  }
+
+  function handleEvent(evt) {
+    switch (evt.type) {
+      case 'status':
+        setStatus(evt.message, true);
+        break;
+      case 'agent_event': {
+        const e = evt.event;
+        addTrace(e);
+        advanceByTool(e.tool_name || '');
+        if (e.event_type === 'agent_final_response') { stepIdx = 5; renderTimeline(); }
+        break;
+      }
+      case 'result':
+        setStatus(evt.writeback_enabled ? 'Done — artifacts written to Elastic.' : 'Done — preview mode, no writeback.', false);
+        renderResults(evt.structured || {}, evt.mission || '');
+        if (evt.write_counts) showWriteback(evt.write_counts);
+        finishTimeline();
+        break;
+      case 'error':
+        el('resultArea').innerHTML = `<div class="result-section"><div style="color:var(--red);font-size:13px;">Error: ${escHtml(evt.message)}</div></div>`;
+        setStatus('Mission failed.', false);
+        break;
+    }
+  }
+
+  function escHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(s) {
+    if (s == null) return '';
+    return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  async function loadConfig() {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    el('caseIdBadge').textContent = 'Case: ' + cfg.case_id;
+    el('gcpBadge').textContent = 'GCP: ' + cfg.gcp_project;
+    el('missionsGrid').innerHTML = (cfg.missions || []).map((m, i) => `
+      <button class="mission-btn" data-mission="${escAttr(m.id)}">
+        <div class="m-num">${i + 1}</div>
+        <div>
+          <div class="m-title">${escHtml(m.label)}</div>
+          <div class="m-desc">${escHtml(m.description)}</div>
+        </div>
+      </button>
+    `).join('');
+    document.querySelectorAll('.mission-btn').forEach(btn => {
+      btn.addEventListener('click', () => runMission(btn.dataset.mission));
     });
-  </script>
+    renderTimeline();
+  }
+
+  el('resetBtn').addEventListener('click', async () => {
+    if (!confirm('Delete all generated demo artifacts from evidence_gaps, appeal_packets, and action_logs?')) return;
+    setButtonsDisabled(true);
+    setStatus('Resetting...', true);
+    try {
+      const res = await fetch('/api/reset-demo-writeback', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Reset failed');
+      setStatus('Reset complete: ' + JSON.stringify(data.deleted), false);
+    } catch (e) {
+      setStatus('Reset failed: ' + e.message, false);
+    } finally {
+      setButtonsDisabled(false);
+    }
+  });
+
+  loadConfig().catch(e => setStatus('Config failed: ' + e.message, false));
+  renderTimeline();
+</script>
 </body>
 </html>
