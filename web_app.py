@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
@@ -92,6 +93,7 @@ class AdvocateAlertRequest(BaseModel):
 
 
 app = FastAPI(title="Dignity Machine")
+app.mount("/assets", StaticFiles(directory=ROOT / "static" / "assets"), name="assets")
 session_service = InMemorySessionService()
 runner = Runner(app_name=APP_NAME, agent=root_agent, session_service=session_service)
 denial_runner = Runner(app_name=APP_NAME + "_denial", agent=denial_analyst, session_service=session_service)
@@ -664,6 +666,16 @@ def markdown_from_structured(result: dict[str, Any], write_counts: dict[str, int
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(ROOT / "static" / "index.html")
+
+
+@app.get("/favicon.svg")
+def favicon() -> FileResponse:
+    return FileResponse(ROOT / "static" / "favicon.svg")
+
+
+@app.get("/icons.svg")
+def icons() -> FileResponse:
+    return FileResponse(ROOT / "static" / "icons.svg")
 
 
 @app.get("/api/config")
