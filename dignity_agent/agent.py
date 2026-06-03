@@ -16,6 +16,29 @@ ELASTIC_API_KEY = os.environ["ELASTIC_API_KEY"]
 
 MODEL = os.getenv("DIGNITY_AGENT_MODEL", "gemini-2.5-flash")
 
+DENIAL_TOOL_NAMES = """
+Available Elastic MCP tools for this specialist. Use these exact names only:
+- dignity_get_maria_documents
+- dignity_search_case_documents
+- dignity_search_ssa_policy
+
+Never abbreviate, pluralize, rename, or partially type a tool name. In particular,
+the SSA policy search tool is exactly dignity_search_ssa_policy.
+"""
+
+ORCHESTRATOR_TOOL_NAMES = """
+Available Elastic MCP tools for this orchestrator. Use these exact names only:
+- dignity_get_maria_documents
+- dignity_search_case_documents
+- dignity_search_ssa_policy
+- dignity_search_ssa_forms
+- dignity_get_advocate_contact
+- dignity_search_case_memory
+
+Never abbreviate, pluralize, rename, or partially type a tool name. In particular,
+the SSA policy search tool is exactly dignity_search_ssa_policy.
+"""
+
 _MCP_PARAMS = StreamableHTTPConnectionParams(
     url=f"{KIBANA_URL}/api/agent_builder/mcp",
     headers={
@@ -62,6 +85,8 @@ denial_analyst = Agent(
 You are a denial analysis specialist for the Maria Lopez disability appeal case.
 
 Your job is precise and focused:
+{exact_tool_names}
+
 1. Use dignity_get_maria_documents to see what documents exist in the case packet.
 2. Use dignity_search_case_documents to retrieve the denial notice and understand the denial reason.
 3. Use dignity_search_ssa_policy to find SSA/POMS rules for fibromyalgia evaluation,
@@ -78,7 +103,7 @@ When reporting:
 - Say "possible missing evidence" when the denial implies a gap but does not explicitly state one.
 - Separate facts found in Maria's documents from policy requirements.
 - Recommend human review before any action is taken.
-""",
+""".format(exact_tool_names=DENIAL_TOOL_NAMES),
     tools=[denial_mcp_tools],
 )
 
@@ -107,6 +132,8 @@ Default demo case:
 - appeal stage: reconsideration
 - known issue: denial says severity and functional limits were not established
 
+{exact_tool_names}
+
 Required workflow:
 1. Use dignity_get_maria_documents to inspect the uploaded case packet.
 2. Use dignity_search_case_documents to retrieve the denial reason, medical notes,
@@ -128,6 +155,6 @@ When answering:
 - Keep the output judge-readable: denial reason, retrieved evidence, missing proof,
   recommended actions, and packet-ready summary.
 - Prefer HTTPS secure.ssa.gov URLs in citations.
-""",
+""".format(exact_tool_names=ORCHESTRATOR_TOOL_NAMES),
     tools=[elastic_mcp_tools],
 )

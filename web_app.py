@@ -50,6 +50,27 @@ QUICK_RESPONSE = (
     "Use the default mission query to run Gemini + Elastic MCP. Short greetings "
     "are answered locally and do not call the agent."
 )
+DENIAL_TOOL_NAMES = """
+Available Elastic MCP tools for this mission. Use these exact names only:
+- dignity_get_maria_documents
+- dignity_search_case_documents
+- dignity_search_ssa_policy
+
+Never abbreviate, pluralize, rename, or partially type a tool name. The SSA policy
+search tool is exactly dignity_search_ssa_policy.
+"""
+ORCHESTRATOR_TOOL_NAMES = """
+Available Elastic MCP tools for this mission. Use these exact names only:
+- dignity_get_maria_documents
+- dignity_search_case_documents
+- dignity_search_ssa_policy
+- dignity_search_ssa_forms
+- dignity_get_advocate_contact
+- dignity_search_case_memory
+
+Never abbreviate, pluralize, rename, or partially type a tool name. The SSA policy
+search tool is exactly dignity_search_ssa_policy.
+"""
 
 
 def load_dotenv(path: Path) -> dict[str, str]:
@@ -268,11 +289,15 @@ def mission_instructions(mission: str) -> str:
 
 
 def mission_prompt(user_query: str, mission: str) -> str:
+    tool_names = DENIAL_TOOL_NAMES if mission == "analyze_denial" else ORCHESTRATOR_TOOL_NAMES
     return f"""
 {user_query}
 
 Mission-specific instruction:
 {mission_instructions(mission)}
+
+Tool-name constraints:
+{tool_names}
 
 Return ONLY valid JSON. Do not wrap it in Markdown. Do not use ```json fences.
 Do not place literal line breaks inside JSON string values. If a letter or draft needs
@@ -735,20 +760,38 @@ async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
     async def event_stream():
         try:
             yield f"data: {json.dumps({'type': 'status', 'message': 'Connecting to agent...'})}\n\n"
-            session_id = stable_id("session")
             mission_id = stable_id("mission")
-            await session_service.create_session(app_name=active_runner.app_name, user_id=USER_ID, session_id=session_id)
-            msg = types.Content(role="user", parts=[types.Part.from_text(text=mission_prompt(query, mission))])
             final_text = ""
             action_logs: list[dict[str, Any]] = []
-            async with runner_lock:
-                async for event in active_runner.run_async(user_id=USER_ID, session_id=session_id, new_message=msg):
-                    logs = event_to_action_logs(event, mission_id)
-                    action_logs.extend(logs)
-                    for log in logs:
-                        yield f"data: {json.dumps({'type': 'agent_event', 'event': log})}\n\n"
-                    if event.is_final_response():
-                        final_text = as_plain_text(event)
+            for attempt in range(2):
+                session_id = stable_id("session")
+                await session_service.create_session(app_name=active_runner.app_name, user_id=USER_ID, session_id=session_id)
+                prompt_text = mission_prompt(query, mission)
+                if attempt:
+                    prompt_text = (
+                        "The previous attempt failed because a tool name was misspelled. "
+                        "Use only the exact tool names listed below. Do not call any tool "
+                        "whose name is not listed.\n\n"
+                        f"{prompt_text}"
+                    )
+                msg = types.Content(role="user", parts=[types.Part.from_text(text=prompt_text)])
+                try:
+                    async with runner_lock:
+                        async for event in active_runner.run_async(user_id=USER_ID, session_id=session_id, new_message=msg):
+                            logs = event_to_action_logs(event, mission_id)
+                            action_logs.extend(logs)
+                            for log in logs:
+                                yield f"data: {json.dumps({'type': 'agent_event', 'event': log})}\n\n"
+                            if event.is_final_response():
+                                final_text = as_plain_text(event)
+                    break
+                except ValueError as exc:
+                    if attempt == 0 and "Tool '" in str(exc) and "not found" in str(exc):
+                        final_text = ""
+                        action_logs = []
+                        yield f"data: {json.dumps({'type': 'status', 'message': 'Retrying with exact Elastic tool names...'})}\n\n"
+                        continue
+                    raise
             yield f"data: {json.dumps({'type': 'status', 'message': 'Parsing results...'})}\n\n"
             structured = try_parse_agent_json(final_text)
             if structured is None:
