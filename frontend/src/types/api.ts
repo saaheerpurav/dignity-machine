@@ -12,21 +12,32 @@ export interface ConfigResponse {
 }
 
 export interface PolicyCitation {
+  doc_id?: string
+  chunk_id?: string | null
   title: string
   url?: string
-  excerpt: string
+  excerpt?: string
+  why_it_matters?: string
 }
 
 export interface MedicalEvidence {
   doc_id: string
-  index: string
-  excerpt: string
+  index?: string
+  title?: string
+  excerpt?: string
+  finding?: string
   relevance?: string
 }
 
 export interface MissingEvidenceItem {
-  item: string
-  reason: string
+  item?: string
+  reason?: string
+  gap_type?: string
+  description?: string
+  why_it_matters?: string
+  supporting_policy_ids?: string[]
+  supporting_case_doc_ids?: string[]
+  confidence?: number
 }
 
 export interface StructuredResult {

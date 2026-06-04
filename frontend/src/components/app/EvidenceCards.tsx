@@ -15,7 +15,7 @@ interface EvidenceCardsProps {
   loading: boolean
 }
 
-function DocId({ docId, index }: { docId: string; index: string }) {
+function DocId({ docId, index }: { docId: string; index?: string }) {
   return (
     <Tooltip.Provider delayDuration={200}>
       <Tooltip.Root>
@@ -27,7 +27,7 @@ function DocId({ docId, index }: { docId: string; index: string }) {
         <Tooltip.Portal>
           <Tooltip.Content className="bg-slate-900 text-white text-xs px-3 py-2 rounded-lg z-50 max-w-xs" sideOffset={4}>
             <p className="font-mono">{docId}</p>
-            <p className="text-slate-400 mt-0.5">index: {index}</p>
+            {index && <p className="text-slate-400 mt-0.5">index: {index}</p>}
             <Tooltip.Arrow className="fill-slate-900" />
           </Tooltip.Content>
         </Tooltip.Portal>
@@ -85,6 +85,8 @@ function ExpandableCard({
 }
 
 function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
+  const preview = ev.excerpt || ev.finding || ev.title || 'Retrieved case document'
+  const details = ev.relevance || ev.finding
   return (
     <animated.div style={style} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-blue-200 transition-colors">
       <div className="h-1 w-full bg-blue-200" />
@@ -93,17 +95,22 @@ function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1">Medical Record</p>
             <DocId docId={ev.doc_id} index={ev.index} />
+            {ev.title && <p className="text-xs font-semibold text-slate-600 leading-tight mt-1">{ev.title}</p>}
           </div>
         </div>
         <ExpandableCard
-          preview={ev.excerpt}
+          preview={preview}
           expanded={
-            ev.relevance ? (
+            details ? (
               <div className="border-l-2 border-teal-200 pl-3">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-teal-400 mb-1">Why it matters</p>
-                <p className="text-xs text-teal-600 font-medium leading-relaxed">{ev.relevance}</p>
+                <p className="text-xs text-teal-600 font-medium leading-relaxed">{details}</p>
               </div>
-            ) : null
+            ) : (
+              <div className="text-[11px] text-slate-400">
+                <span className="font-semibold">Source:</span> Elastic case_documents
+              </div>
+            )
           }
         >{null}</ExpandableCard>
       </div>
@@ -112,6 +119,7 @@ function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
 }
 
 function PolicyCard({ citation, style }: { citation: PolicyCitation; style: object }) {
+  const body = citation.excerpt || citation.why_it_matters || 'Retrieved SSA policy citation'
   return (
     <animated.div style={style} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-teal-200 transition-colors">
       <div className="h-1 w-full bg-teal-200" />
@@ -121,21 +129,23 @@ function PolicyCard({ citation, style }: { citation: PolicyCitation; style: obje
             <p className="text-[10px] font-bold uppercase tracking-widest text-teal-500 mb-1">SSA Policy</p>
             <p className="text-xs font-semibold text-slate-600 leading-tight">{citation.title}</p>
           </div>
-          {citation.url && (
-            <a href={citation.url} target="_blank" rel="noopener noreferrer"
-              className="text-slate-300 hover:text-teal-600 transition-colors shrink-0 mt-0.5">
-              <ExternalLink size={13} />
-            </a>
-          )}
         </div>
-        <ExpandableCard
-          preview={citation.excerpt}
-          expanded={
-            <div className="text-[11px] text-slate-400">
-              <span className="font-semibold">Source:</span> SSA official policy corpus
-            </div>
-          }
-        >{null}</ExpandableCard>
+        <p className="text-sm text-slate-700 leading-relaxed">{body}</p>
+        {citation.url && (
+          <a
+            href={citation.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-600 hover:text-teal-700 break-all"
+          >
+            <ExternalLink size={12} className="shrink-0" />
+            {citation.url}
+          </a>
+        )}
+        <div className="text-[11px] text-slate-400">
+          <span className="font-semibold">Source:</span> SSA official policy corpus
+          {citation.doc_id && <span className="font-mono"> - {citation.doc_id}</span>}
+        </div>
       </div>
     </animated.div>
   )

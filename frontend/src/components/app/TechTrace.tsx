@@ -18,7 +18,7 @@ interface TraceEvent {
 function buildEvents(s: StructuredResult): TraceEvent[] {
   const events: TraceEvent[] = []
   s.medical_evidence?.forEach(e =>
-    events.push({ tool: 'search_case_documents', index: e.index, result: e.doc_id })
+    events.push({ tool: 'search_case_documents', index: e.index ?? 'case_documents', result: e.doc_id })
   )
   s.policy_citations?.forEach(c =>
     events.push({ tool: 'search_ssa_policy', index: 'ssa_policy', result: c.title })
