@@ -18,21 +18,25 @@ export function CaseHeader({ caseId, onBack }: CaseHeaderProps) {
         <button
           onClick={onBack}
           className="text-slate-300 hover:text-slate-600 transition-colors cursor-pointer p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100"
+          aria-label="Back to Maria's documents"
         >
           <ArrowLeft size={15} />
         </button>
 
-        <span className="text-teal-600 font-bold text-sm tracking-widest uppercase">
-          Dignity Machine
-        </span>
+        <div>
+          <span className="text-teal-600 font-bold text-sm tracking-widest uppercase">
+            Dignity Machine
+          </span>
+          <p className="text-[11px] text-slate-400 hidden sm:block">Analyzing Maria's denial</p>
+        </div>
 
-        <span className="text-xs text-slate-300 font-mono hidden md:inline truncate max-w-[200px] ml-2">
+        <span className="text-xs text-slate-300 font-mono hidden md:inline truncate max-w-[220px] ml-2">
           {caseId}
         </span>
 
         <div className="ml-auto flex items-center gap-1.5 text-teal-500 text-xs font-medium shrink-0">
           <Zap size={11} />
-          <span className="hidden sm:inline">Live · Elastic + Gemini</span>
+          <span className="hidden sm:inline">Live search with Elastic + Gemini</span>
         </div>
       </div>
     </motion.header>

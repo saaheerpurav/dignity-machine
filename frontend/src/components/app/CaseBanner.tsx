@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Calendar, Briefcase, MapPin } from 'lucide-react'
+import { Briefcase, Calendar, FileText, MapPin } from 'lucide-react'
 
 export function CaseBanner() {
   return (
@@ -9,11 +9,9 @@ export function CaseBanner() {
       transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const }}
       className="relative bg-white border border-slate-200 rounded-3xl overflow-hidden"
     >
-      {/* soft pastel background accent */}
       <div className="absolute inset-0 bg-gradient-to-br from-rose-50/40 via-white to-teal-50/30 pointer-events-none" />
 
       <div className="relative px-6 sm:px-8 py-7 flex items-start gap-6">
-        {/* avatar */}
         <motion.div
           initial={{ scale: 0.85, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -23,7 +21,6 @@ export function CaseBanner() {
           <span className="text-2xl sm:text-3xl font-bold text-teal-700">ML</span>
         </motion.div>
 
-        {/* main */}
         <div className="flex-1 min-w-0">
           <motion.p
             initial={{ opacity: 0 }}
@@ -31,7 +28,7 @@ export function CaseBanner() {
             transition={{ delay: 0.18 }}
             className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5"
           >
-            Case file · SSA Disability appeal
+            Maria's documents
           </motion.p>
 
           <motion.h1
@@ -54,7 +51,15 @@ export function CaseBanner() {
             <span className="text-lg sm:text-xl font-semibold text-slate-700">Fibromyalgia</span>
           </motion.div>
 
-          {/* metadata */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.36 }}
+            className="mt-3 max-w-2xl text-sm text-slate-500 leading-relaxed"
+          >
+            The agent is reading Maria's denial letter and doctor records, then comparing them with Social Security rules saved in Elastic.
+          </motion.p>
+
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -63,7 +68,7 @@ export function CaseBanner() {
           >
             <span className="flex items-center gap-1.5">
               <Calendar size={11} className="text-slate-300" />
-              Denial issued <span className="text-slate-600 font-medium">March 2024</span>
+              Denial letter <span className="text-slate-600 font-medium">March 2024</span>
             </span>
             <span className="flex items-center gap-1.5">
               <Briefcase size={11} className="text-slate-300" />
@@ -76,21 +81,28 @@ export function CaseBanner() {
           </motion.div>
         </div>
 
-        {/* status indicator */}
         <motion.div
           initial={{ opacity: 0, x: 12 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.38 }}
-          className="hidden md:flex flex-col items-end shrink-0 gap-1"
+          className="hidden md:flex flex-col items-end shrink-0 gap-2"
         >
           <div className="flex items-center gap-1.5">
             <span className="relative flex w-2 h-2">
-              <span className="absolute inset-0 rounded-full bg-rose-300 opacity-75 animate-ping" />
-              <span className="relative rounded-full bg-rose-400 w-2 h-2" />
+              <span className="absolute inset-0 rounded-full bg-teal-300 opacity-75 animate-ping" />
+              <span className="relative rounded-full bg-teal-500 w-2 h-2" />
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-rose-400">Active appeal</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-teal-600">Ready to analyze</span>
           </div>
-          <p className="text-[11px] text-slate-400">60-day deadline</p>
+          <a
+            href="/documents/maria-lopez-documents.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 hover:text-teal-700"
+          >
+            <FileText size={12} />
+            View documents
+          </a>
         </motion.div>
       </div>
     </motion.section>

@@ -12,10 +12,10 @@ const MOCK: AnalyzeResponse = {
       "SSA denied Maria Lopez's claim because the file does not yet prove fibromyalgia severity or work-related functional limits.",
     policy_citations: [
       {
-        title: 'SSA POMS DI 24515.076 - Evaluation of Fibromyalgia',
+        title: 'Social Security rule - Evaluation of Fibromyalgia',
         url: 'https://secure.ssa.gov/apps10/poms.nsf/lnx/0424515076',
         excerpt:
-          'Fibromyalgia can be a medically determinable impairment when the record contains appropriate longitudinal medical evidence.',
+          'Fibromyalgia can be reviewed when the file includes doctor records over time.',
       },
     ],
     medical_evidence: [
@@ -23,7 +23,7 @@ const MOCK: AnalyzeResponse = {
         doc_id: 'doc_denial_letter_001',
         index: 'case_documents',
         excerpt:
-          'The denial says the current evidence does not establish disabling functional limitations.',
+          "The denial says the current records do not clearly prove Maria's work limits.",
         relevance: 'Core denial reason',
       },
     ],
@@ -39,7 +39,7 @@ const MOCK: AnalyzeResponse = {
     advocate_alert_draft:
       'Hi Elena, Dignity Machine found missing RFC and longitudinal treatment evidence for Maria Lopez. Please review the drafted records request before sending.',
     packet_summary:
-      'The appeal packet should focus on missing functional-limit evidence, longitudinal rheumatology records, and SSA fibromyalgia policy.',
+      "The review summary should focus on Maria's missing doctor statement, follow-up records, and relevant Social Security rules.",
     next_actions: [
       'Request RFC statement from treating rheumatologist',
       'Collect missing follow-up records',

@@ -11,10 +11,17 @@ const iconMap: Record<string, React.ElementType> = {
 }
 
 const descMap: Record<string, string> = {
-  analyze_denial: 'Extract denial reason + SSA policy',
-  find_missing_evidence: 'Find gaps vs. policy requirements',
-  draft_records_request: 'Draft provider records request',
-  prepare_packet: 'Build full advocate-ready packet',
+  analyze_denial: 'Explain why Maria was denied',
+  find_missing_evidence: 'Find proof her file still needs',
+  draft_records_request: 'Ask doctors for the missing records',
+  prepare_packet: 'Create a summary for a human helper',
+}
+
+const labelMap: Record<string, string> = {
+  analyze_denial: 'Explain the denial',
+  find_missing_evidence: 'Find missing proof',
+  draft_records_request: 'Draft doctor records request',
+  prepare_packet: 'Create review summary',
 }
 
 interface MissionButtonsProps {
@@ -31,6 +38,7 @@ export function MissionButtons({ missions, activeMission, loading, onSelect }: M
         const Icon = iconMap[mission.id] ?? Search
         const isActive = activeMission === mission.id
         const desc = descMap[mission.id] ?? mission.description
+        const label = labelMap[mission.id] ?? mission.label
         return (
           <motion.button
             key={mission.id}
@@ -65,7 +73,7 @@ export function MissionButtons({ missions, activeMission, loading, onSelect }: M
               'relative text-sm font-semibold leading-tight mb-1',
               isActive ? 'text-teal-800' : 'text-slate-700'
             )}>
-              {mission.label}
+              {label}
             </div>
             <div className={clsx(
               'relative text-xs leading-relaxed',

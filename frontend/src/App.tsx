@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { RotateCcw } from 'lucide-react'
 import { useConfig } from '@/hooks/useConfig'
 import { useAnalyze } from '@/hooks/useAnalyze'
 import { LandingPage } from '@/components/landing/LandingPage'
+import { DocumentPreview } from '@/components/landing/DocumentPreview'
 import { CaseHeader } from '@/components/app/CaseHeader'
 import { MissionButtons } from '@/components/app/MissionButtons'
 import { MissionTimeline } from '@/components/app/MissionTimeline'
@@ -13,9 +15,8 @@ import { TechTrace } from '@/components/app/TechTrace'
 import { WritebackStatus } from '@/components/app/WritebackStatus'
 import { StatsBar } from '@/components/app/StatsBar'
 import { CaseBanner } from '@/components/app/CaseBanner'
-import { RotateCcw } from 'lucide-react'
 
-type View = 'landing' | 'app'
+type View = 'landing' | 'documents' | 'app'
 
 const pageTransition = {
   initial: { opacity: 0, y: 16 },
@@ -36,7 +37,7 @@ function AppDashboard({ onBack }: { onBack: () => void }) {
   }
 
   const handleReset = async () => {
-    if (!confirm('Delete generated demo artifacts from Elastic?')) return
+    if (!confirm('Delete generated demo notes from Elastic?')) return
     await fetch('/api/reset-demo-writeback', { method: 'POST' })
   }
 
@@ -44,14 +45,11 @@ function AppDashboard({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <CaseHeader caseId={config?.case_id ?? '…'} onBack={onBack} />
+      <CaseHeader caseId={config?.case_id ?? '...'} onBack={onBack} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-
-        {/* case banner — patient hero */}
         <CaseBanner />
 
-        {/* mission buttons */}
         {configLoading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[1, 2, 3, 4].map(i => <div key={i} className="shimmer h-28 rounded-2xl" />)}
@@ -65,14 +63,12 @@ function AppDashboard({ onBack }: { onBack: () => void }) {
           />
         )}
 
-        {/* timeline */}
         <MissionTimeline running={loading} done={!!data && !loading} />
 
-        {/* controls row — de-emphasised */}
         <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-100">
           <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
             <input type="checkbox" checked={writeback} onChange={e => setWriteback(e.target.checked)} className="accent-teal-600" />
-            Write artifacts to Elastic
+            Save generated notes in Elastic
           </label>
           <button onClick={handleReset} className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-red-400 transition-colors cursor-pointer">
             <RotateCcw size={11} />
@@ -80,13 +76,9 @@ function AppDashboard({ onBack }: { onBack: () => void }) {
           </button>
         </div>
 
-        {/* writeback indicator */}
         {data && <WritebackStatus enabled={data.writeback_enabled} writeCounts={data.write_counts} />}
-
-        {/* stats bar */}
         {structured && !loading && <StatsBar structured={structured} />}
 
-        {/* main content grid */}
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <EvidenceCards
@@ -102,11 +94,10 @@ function AppDashboard({ onBack }: { onBack: () => void }) {
           </div>
         </div>
 
-        {/* empty state */}
         {!loading && !data && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-24">
-            <p className="text-sm font-medium text-slate-400">Select a mission to run the live agent</p>
-            <p className="text-xs mt-1.5 text-slate-300">Each run calls Gemini + Elastic in real time · No cache</p>
+            <p className="text-sm font-medium text-slate-400">Choose what you want the agent to do</p>
+            <p className="text-xs mt-1.5 text-slate-300">Each run searches Maria's documents and Social Security rules in Elastic</p>
           </motion.div>
         )}
       </div>
@@ -118,18 +109,20 @@ export default function App() {
   const [view, setView] = useState<View>('landing')
 
   return (
-    <>
-      <AnimatePresence mode="wait">
-        {view === 'landing' ? (
-          <motion.div key="landing" {...pageTransition}>
-            <LandingPage onEnter={() => setView('app')} />
-          </motion.div>
-        ) : (
-          <motion.div key="app" {...pageTransition}>
-            <AppDashboard onBack={() => setView('landing')} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+    <AnimatePresence mode="wait">
+      {view === 'landing' ? (
+        <motion.div key="landing" {...pageTransition}>
+          <LandingPage onEnter={() => setView('documents')} />
+        </motion.div>
+      ) : view === 'documents' ? (
+        <motion.div key="documents" {...pageTransition}>
+          <DocumentPreview onBack={() => setView('landing')} onAnalyze={() => setView('app')} />
+        </motion.div>
+      ) : (
+        <motion.div key="app" {...pageTransition}>
+          <AppDashboard onBack={() => setView('documents')} />
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }

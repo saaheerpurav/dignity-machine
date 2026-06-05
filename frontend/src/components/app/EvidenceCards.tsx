@@ -93,7 +93,7 @@ function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
       <div className="p-5 space-y-2.5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1">Medical Record</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1">Doctor record</p>
             <DocId docId={ev.doc_id} index={ev.index} />
             {ev.title && <p className="text-xs font-semibold text-slate-600 leading-tight mt-1">{ev.title}</p>}
           </div>
@@ -108,7 +108,7 @@ function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
               </div>
             ) : (
               <div className="text-[11px] text-slate-400">
-                <span className="font-semibold">Source:</span> Elastic case_documents
+                <span className="font-semibold">Source:</span> Maria's documents in Elastic
               </div>
             )
           }
@@ -126,7 +126,7 @@ function PolicyCard({ citation, style }: { citation: PolicyCitation; style: obje
       <div className="p-5 space-y-2.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-teal-500 mb-1">SSA Policy</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-teal-500 mb-1">Social Security rule</p>
             <p className="text-xs font-semibold text-slate-600 leading-tight">{citation.title}</p>
           </div>
         </div>
@@ -143,7 +143,7 @@ function PolicyCard({ citation, style }: { citation: PolicyCitation; style: obje
           </a>
         )}
         <div className="text-[11px] text-slate-400">
-          <span className="font-semibold">Source:</span> SSA official policy corpus
+          <span className="font-semibold">Source:</span> Social Security rules in Elastic
           {citation.doc_id && <span className="font-mono"> - {citation.doc_id}</span>}
         </div>
       </div>
@@ -231,7 +231,7 @@ export function EvidenceCards({ medical, policy, loading }: EvidenceCardsProps) 
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-baseline gap-3">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Evidence retrieved</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">What the agent found</h3>
         </div>
         <FilterControl mode={mode} onChange={setMode} counts={visible.counts} />
       </div>

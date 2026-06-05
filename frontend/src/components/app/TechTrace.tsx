@@ -38,7 +38,7 @@ export function TechTrace({ structured, loading, missionId }: TechTraceProps) {
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col h-full">
       <div className="px-5 py-4 border-b border-slate-100">
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Technical trace</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Agent trace</p>
         {missionId && (
           <p className="text-[10px] font-mono text-slate-300 mt-1 truncate">{missionId}</p>
         )}
@@ -50,7 +50,7 @@ export function TechTrace({ structured, loading, missionId }: TechTraceProps) {
             {loading && <div className="space-y-4 pt-1"><Shimmer lines={2} /><Shimmer lines={2} /><Shimmer lines={2} /></div>}
 
             {!loading && events.length === 0 && (
-              <p className="text-xs text-slate-300 pt-1">Run a mission to see tool calls.</p>
+              <p className="text-xs text-slate-300 pt-1">Choose an action to see what the agent searched.</p>
             )}
 
             {events.map((ev, i) => (

@@ -115,6 +115,7 @@ class AdvocateAlertRequest(BaseModel):
 
 app = FastAPI(title="Dignity Machine")
 app.mount("/assets", StaticFiles(directory=ROOT / "static" / "assets"), name="assets")
+app.mount("/documents", StaticFiles(directory=ROOT / "static" / "documents"), name="documents")
 session_service = InMemorySessionService()
 runner = Runner(app_name=APP_NAME, agent=root_agent, session_service=session_service)
 denial_runner = Runner(app_name=APP_NAME + "_denial", agent=denial_analyst, session_service=session_service)
@@ -711,23 +712,23 @@ def config() -> dict[str, Any]:
         "missions": [
             {
                 "id": "analyze_denial",
-                "label": "Analyze denial",
-                "description": "Extract denial reason and supporting SSA policy.",
+                "label": "Explain the denial",
+                "description": "Explain why Maria was denied.",
             },
             {
                 "id": "find_missing_evidence",
-                "label": "Find missing evidence",
-                "description": "Compare Maria's file against policy requirements.",
+                "label": "Find missing proof",
+                "description": "Find proof her file still needs.",
             },
             {
                 "id": "draft_records_request",
-                "label": "Draft records request",
-                "description": "Prepare provider request language for missing proof.",
+                "label": "Draft doctor records request",
+                "description": "Ask doctors for the missing records.",
             },
             {
                 "id": "prepare_packet",
-                "label": "Prepare packet",
-                "description": "Build the full advocate-ready packet draft.",
+                "label": "Create review summary",
+                "description": "Create a summary for a human helper.",
             },
         ],
         "writeback_default": False,

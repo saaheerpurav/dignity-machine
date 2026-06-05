@@ -25,8 +25,8 @@ export function MissingEvidence({ items, loading }: MissingEvidenceProps) {
       <div className="bg-amber-50/60 border-b border-amber-100 px-6 py-4 flex items-baseline gap-3">
         <span className="text-2xl font-bold text-amber-400 leading-none">{items.length}</span>
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Evidence gaps</p>
-          <p className="text-xs text-amber-400 mt-0.5">Missing proof that weakened the claim</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Missing proof</p>
+          <p className="text-xs text-amber-400 mt-0.5">What Maria may need to add</p>
         </div>
       </div>
 

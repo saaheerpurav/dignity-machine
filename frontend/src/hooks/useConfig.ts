@@ -6,10 +6,10 @@ const FALLBACK: ConfigResponse = {
   gcp_project: 'integral-tensor-497618-a8',
   writeback_default: false,
   missions: [
-    { id: 'analyze_denial', label: 'Analyze denial', description: 'Extract denial reason and supporting SSA policy.' },
-    { id: 'find_missing_evidence', label: 'Find missing evidence', description: 'Compare file against policy requirements.' },
-    { id: 'draft_records_request', label: 'Draft records request', description: 'Prepare provider request for missing proof.' },
-    { id: 'prepare_packet', label: 'Prepare packet', description: 'Build the full advocate-ready packet draft.' },
+    { id: 'analyze_denial', label: 'Explain the denial', description: 'Explain why Maria was denied.' },
+    { id: 'find_missing_evidence', label: 'Find missing proof', description: 'Find proof her file still needs.' },
+    { id: 'draft_records_request', label: 'Draft doctor records request', description: 'Ask doctors for the missing records.' },
+    { id: 'prepare_packet', label: 'Create review summary', description: 'Create a summary for a human helper.' },
   ],
 }
 

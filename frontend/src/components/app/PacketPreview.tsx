@@ -183,7 +183,7 @@ export function PacketPreview({ structured, loading }: PacketPreviewProps) {
 
         {/* header */}
         <div className="px-6 py-5 border-b border-slate-100 flex items-baseline gap-3 relative">
-          <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Advocate packet</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Review summary</span>
           <div className="h-px flex-1 bg-slate-100" />
           <div className="flex items-center gap-1.5 text-xs text-emerald-500 font-medium">
             <span className="relative flex w-1.5 h-1.5">
@@ -204,7 +204,7 @@ export function PacketPreview({ structured, loading }: PacketPreviewProps) {
           {records_request_draft && (
             <Section
               icon={FileText}
-              label="Records request"
+              label="Doctor records request"
               accent="bg-sky-50 text-sky-400"
               headerExtra={<CopyButton text={records_request_draft} />}
             >
@@ -215,7 +215,7 @@ export function PacketPreview({ structured, loading }: PacketPreviewProps) {
           {advocate_alert_draft && (
             <Section
               icon={Mail}
-              label="Advocate alert"
+              label="Helper alert"
               accent="bg-teal-50 text-teal-400"
               headerExtra={<CopyButton text={advocate_alert_draft} />}
             >
