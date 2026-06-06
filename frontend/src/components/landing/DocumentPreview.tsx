@@ -56,13 +56,13 @@ export function DocumentPreview({ onBack, onAnalyze }: DocumentPreviewProps) {
               <div>
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">What you are reading</p>
                 <p className="text-slate-700 leading-relaxed">
-                  A short example file with Maria's denial letter, doctor notes, daily-work limits, missing records, and helper contact.
+                  A realistic denial letter like the kind someone could upload after Social Security says no.
                 </p>
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">What the agent uses</p>
                 <p className="text-slate-700 leading-relaxed">
-                  The same text is already saved in Elastic, along with Social Security rules, so the agent can search it live.
+                  This denial letter, related doctor record excerpts, and Social Security rules are already saved in Elastic for the live demo.
                 </p>
               </div>
             </div>
@@ -70,10 +70,10 @@ export function DocumentPreview({ onBack, onAnalyze }: DocumentPreviewProps) {
             <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 space-y-2">
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Included</p>
               <ul className="space-y-1.5 text-sm text-slate-600">
-                <li>Denial letter summary</li>
-                <li>Doctor record excerpts</li>
-                <li>How symptoms affect daily work</li>
-                <li>Missing proof the agent should find</li>
+                <li>Decision: denied</li>
+                <li>Why Social Security said no</li>
+                <li>Records Social Security reviewed</li>
+                <li>What information may be missing</li>
               </ul>
             </div>
 

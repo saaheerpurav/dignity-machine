@@ -4,277 +4,179 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [4 0 R 5 0 R 6 0 R 7 0 R 8 0 R] /Count 5 >>
+<< /Type /Pages /Kids [4 0 R 5 0 R] /Count 2 >>
 endobj
 3 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
 endobj
 4 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 9 0 R >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 6 0 R >>
 endobj
 5 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 10 0 R >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
 endobj
 6 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 11 0 R >>
-endobj
-7 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 12 0 R >>
-endobj
-8 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 13 0 R >>
-endobj
-9 0 obj
-<< /Length 833 >>
+<< /Length 1735 >>
 stream
 BT
 /F1 11 Tf
 50 742 Td
 14 TL
 /F1 18 Tf
-(Maria Lopez - Disability Denial Example) Tj
+(Social Security Administration) Tj
 /F1 11 Tf
 T*
-() Tj
-T*
-(Demo note) Tj
-T*
-(This example was created for a hackathon demo. It mirrors the same Maria Lopez) Tj
-T*
-(information already saved in Elastic for the live agent run.) Tj
-T*
-() Tj
-T*
-(Who this is about) Tj
-T*
-(Name: Maria Lopez) Tj
-T*
-(Condition: Fibromyalgia) Tj
-T*
-(Where she is in the process: Second review after a denial) Tj
-T*
-(Main problem: Social Security said the records do not prove how her condition) Tj
-T*
-(affects her ability to work every day.) Tj
-T*
-() Tj
-T*
-(What the agent should do) Tj
-T*
-(1. Read the denial letter.) Tj
-T*
-(2. Search Maria's doctor records.) Tj
-T*
-(3. Check Social Security rules.) Tj
-T*
-(4. Find missing proof.) Tj
-T*
-(5. Draft a doctor records request for a human helper to review.) Tj
-ET
-endstream
-endobj
-10 0 obj
-<< /Length 919 >>
-stream
-BT
-/F1 11 Tf
-50 742 Td
-14 TL
-/F1 18 Tf
-(Denial Letter Summary) Tj
-/F1 11 Tf
+(Notice of Disability Decision) Tj
 T*
 () Tj
 T*
 (Date: March 18, 2024) Tj
 T*
-(Decision: Denied) Tj
+(Claimant: Maria Lopez) Tj
+T*
+(Claim Type: Disability Insurance Benefits) Tj
+T*
+(Condition Reviewed: Fibromyalgia) Tj
 T*
 () Tj
 T*
-(The denial says Maria's fibromyalgia is documented, but the file does not show) Tj
+(We have reviewed your claim for disability benefits. Based on the medical) Tj
 T*
-(enough proof of severity and work limits. The decision says the available) Tj
+(and other information currently in your file, we have determined that you) Tj
 T*
-(records do not clearly explain how long Maria can sit, stand, walk, lift,) Tj
-T*
-(focus, or keep a regular schedule.) Tj
+(are not disabled under our rules.) Tj
 T*
 () Tj
 T*
-(The denial also notes that the file is missing recent follow-up notes from) Tj
-T*
-(Lakeview Rheumatology and does not include a treating doctor's statement about) Tj
-T*
-(Maria's work limits.) Tj
+(Why We Made This Decision) Tj
 T*
 () Tj
 T*
-(Plain-English issue) Tj
+(Your records show that you have been treated for fibromyalgia, including) Tj
 T*
-(Maria is not being denied because fibromyalgia is impossible to prove.) Tj
+(reports of widespread pain, fatigue, poor sleep, and difficulty concentrating.) Tj
 T*
-(She is being denied because the documents do not yet connect her symptoms to) Tj
+(We considered these symptoms when reviewing your claim.) Tj
 T*
-(specific work limits in a way Social Security can review.) Tj
+() Tj
+T*
+(However, the evidence in your file does not show that your condition prevents) Tj
+T*
+(you from doing all work activity on a regular and continuing basis. The) Tj
+T*
+(records do not include a treating doctor statement explaining your limits) Tj
+T*
+(with sitting, standing, walking, lifting, staying on task, or attending work) Tj
+T*
+(on a consistent schedule.) Tj
+T*
+() Tj
+T*
+(We also did not receive complete follow-up treatment notes for the recent) Tj
+T*
+(period referenced in your file. Without those records, we could not confirm) Tj
+T*
+(the frequency and severity of your symptoms over time.) Tj
+T*
+() Tj
+T*
+(Evidence We Reviewed) Tj
+T*
+() Tj
+T*
+(- Application for disability benefits) Tj
+T*
+(- Adult Function Report) Tj
+T*
+(- Primary care treatment notes) Tj
+T*
+(- Rheumatology treatment note dated January 12, 2024) Tj
+T*
+(- Medication list submitted with your claim) Tj
+T*
+(- Work history information submitted with your claim) Tj
 ET
 endstream
 endobj
-11 0 obj
-<< /Length 961 >>
+7 0 obj
+<< /Length 1450 >>
 stream
 BT
 /F1 11 Tf
 50 742 Td
 14 TL
 /F1 18 Tf
-(Doctor Records) Tj
+(Social Security Administration) Tj
 /F1 11 Tf
 T*
-() Tj
-T*
-(Lakeview Rheumatology - January 12, 2024) Tj
-T*
-(Maria reports widespread pain, poor sleep, fatigue, and brain fog. Exam notes) Tj
-T*
-(show widespread tenderness. The doctor continued medication and asked Maria) Tj
-T*
-(to return in four weeks.) Tj
+(Notice of Disability Decision - Continued) Tj
 T*
 () Tj
 T*
-(Lakeview Rheumatology - Missing follow-up records) Tj
-T*
-(The file mentions follow-up visits in February, March, and April 2024, but) Tj
-T*
-(those notes are not included in the documents available for review.) Tj
+(What We Found) Tj
 T*
 () Tj
 T*
-(Primary Care Note - February 2, 2024) Tj
+(The medical evidence supports that you have a medically documented condition.) Tj
 T*
-(Maria reports that pain and fatigue make it hard to sit at a desk for a full) Tj
+(The evidence does not currently show enough detail about how the condition) Tj
 T*
-(workday. The note does not estimate how long she can sit, stand, walk, lift,) Tj
-T*
-(or stay focused.) Tj
+(limits your ability to function during a normal workday and workweek.) Tj
 T*
 () Tj
 T*
-(What is missing) Tj
-T*
-(The file does not include a doctor statement that describes Maria's daily work) Tj
-T*
-(limits in concrete terms.) Tj
-ET
-endstream
-endobj
-12 0 obj
-<< /Length 853 >>
-stream
-BT
-/F1 11 Tf
-50 742 Td
-14 TL
-/F1 18 Tf
-(Maria's Daily Work Limits) Tj
-/F1 11 Tf
+(The file would need more information about:) Tj
 T*
 () Tj
 T*
-(Maria says she can sit for about 20 minutes before needing to change position.) Tj
+(- How long you can sit, stand, and walk during a normal day) Tj
 T*
-(She says she can stand for about 10 minutes before pain increases. She says) Tj
+(- How much you can lift or carry) Tj
 T*
-(she has several bad days each month where fatigue and pain keep her from) Tj
+(- Whether pain, fatigue, or medication side effects affect concentration) Tj
 T*
-(leaving home.) Tj
+(- How often symptoms would cause missed work or extra breaks) Tj
 T*
-() Tj
-T*
-(Maria also reports trouble focusing when pain and sleep loss are severe.) Tj
-T*
-(The documents describe limits with sitting, typing, focus, and keeping a) Tj
-T*
-(regular schedule.) Tj
+(- Whether recent follow-up visits show ongoing severe symptoms) Tj
 T*
 () Tj
 T*
-(Possible missing proof) Tj
-T*
-(1. Treating doctor statement about sitting, standing, lifting, focus, and absences.) Tj
-T*
-(2. February through April rheumatology notes.) Tj
-T*
-(3. Medication side effect notes.) Tj
-T*
-(4. Any record explaining bad days and missed-work risk.) Tj
-ET
-endstream
-endobj
-13 0 obj
-<< /Length 755 >>
-stream
-BT
-/F1 11 Tf
-50 742 Td
-14 TL
-/F1 18 Tf
-(Helper Contact) Tj
-/F1 11 Tf
+(Your Right To Appeal) Tj
 T*
 () Tj
 T*
-(Name: Elena Vargas) Tj
+(If you disagree with this decision, you may ask us to review your claim again.) Tj
 T*
-(Role: Disability benefits helper) Tj
+(You must request an appeal within 60 days from the date you receive this) Tj
 T*
-(Email: elena.vargas@example.org) Tj
+(notice. You may submit additional medical records, doctor statements, or other) Tj
 T*
-() Tj
-T*
-(What the agent can draft) Tj
-T*
-(The agent can prepare a doctor records request asking Lakeview Rheumatology) Tj
-T*
-(for missing follow-up notes and a doctor statement about Maria's work limits.) Tj
+(information that explains how your condition affects your ability to work.) Tj
 T*
 () Tj
 T*
-(Human review required) Tj
+(If you have questions, contact your local Social Security office or a trusted) Tj
 T*
-(The agent should not send anything by itself. A human should review the draft) Tj
-T*
-(before it is sent to a doctor, helper, or agency.) Tj
+(representative before sending new information.) Tj
 T*
 () Tj
 T*
-(Elastic note) Tj
-T*
-(This PDF is for the judge to read. The same text is already saved in Elastic) Tj
-T*
-(so the agent can search it during the live demo.) Tj
+(This notice is based on the information currently available in your file.) Tj
 ET
 endstream
 endobj
 xref
-0 14
+0 8
 0000000000 65535 f
 0000000015 00000 n
 0000000064 00000 n
-0000000145 00000 n
-0000000215 00000 n
-0000000341 00000 n
-0000000468 00000 n
-0000000595 00000 n
-0000000722 00000 n
-0000000849 00000 n
-0000001733 00000 n
-0000002704 00000 n
-0000003717 00000 n
-0000004622 00000 n
+0000000127 00000 n
+0000000197 00000 n
+0000000323 00000 n
+0000000449 00000 n
+0000002236 00000 n
 trailer
-<< /Size 14 /Root 1 0 R >>
+<< /Size 8 /Root 1 0 R >>
 startxref
-5429
+3738
 %%EOF
