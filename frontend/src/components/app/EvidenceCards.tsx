@@ -20,7 +20,7 @@ function DocId({ docId, index }: { docId: string; index?: string }) {
     <Tooltip.Provider delayDuration={200}>
       <Tooltip.Root>
         <Tooltip.Trigger asChild>
-          <span className="text-[10px] font-mono text-slate-300 hover:text-slate-500 cursor-default transition-colors truncate max-w-[140px]">
+          <span className="text-[10px] font-mono text-slate-600 hover:text-slate-800 cursor-default transition-colors truncate max-w-[180px]">
             {docId}
           </span>
         </Tooltip.Trigger>
@@ -71,7 +71,7 @@ function ExpandableCard({
       </AnimatePresence>
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-slate-300 hover:text-slate-500 transition-colors cursor-pointer mt-1"
+        className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-slate-600 hover:text-slate-800 transition-colors cursor-pointer mt-1"
       >
         {open ? 'Show less' : 'Show details'}
         <ChevronDown
@@ -86,7 +86,7 @@ function ExpandableCard({
 
 function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
   const preview = ev.excerpt || ev.finding || ev.title || 'Retrieved case document'
-  const details = ev.relevance || ev.finding
+  const distinctDetails = ev.relevance && ev.relevance.trim() !== preview.trim() ? ev.relevance : ''
   return (
     <animated.div style={style} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-blue-200 transition-colors">
       <div className="h-1 w-full bg-blue-200" />
@@ -101,14 +101,16 @@ function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
         <ExpandableCard
           preview={preview}
           expanded={
-            details ? (
+            distinctDetails ? (
               <div className="border-l-2 border-teal-200 pl-3">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-teal-400 mb-1">Why it matters</p>
-                <p className="text-xs text-teal-600 font-medium leading-relaxed">{details}</p>
+                <p className="text-xs text-teal-700 font-medium leading-relaxed">{distinctDetails}</p>
               </div>
             ) : (
-              <div className="text-[11px] text-slate-400">
-                <span className="font-semibold">Source:</span> Maria's documents in Elastic
+              <div className="text-[11px] text-slate-600 leading-relaxed space-y-1">
+                <p><span className="font-semibold text-slate-700">Source:</span> Maria's documents in Elastic</p>
+                {ev.title && <p><span className="font-semibold text-slate-700">Document:</span> {ev.title}</p>}
+                <p><span className="font-semibold text-slate-700">ID:</span> <span className="font-mono">{ev.doc_id}</span></p>
               </div>
             )
           }
