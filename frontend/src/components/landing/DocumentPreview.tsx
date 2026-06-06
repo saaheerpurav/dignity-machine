@@ -71,8 +71,8 @@ export function DocumentPreview({ onBack, onAnalyze }: DocumentPreviewProps) {
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Included</p>
               <ul className="space-y-1.5 text-sm text-slate-600">
                 <li>Denial letter summary</li>
-                <li>Doctor records from Lakeview Rheumatology</li>
-                <li>Maria's daily-work limits</li>
+                <li>Doctor record excerpts</li>
+                <li>How symptoms affect daily work</li>
                 <li>Missing proof the agent should find</li>
               </ul>
             </div>

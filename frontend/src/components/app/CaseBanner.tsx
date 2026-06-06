@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Briefcase, Calendar, FileText, MapPin } from 'lucide-react'
+import { FileText, Search, ShieldCheck } from 'lucide-react'
 
 export function CaseBanner() {
   return (
@@ -67,16 +67,16 @@ export function CaseBanner() {
             className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-400"
           >
             <span className="flex items-center gap-1.5">
-              <Calendar size={11} className="text-slate-300" />
-              Denial letter <span className="text-slate-600 font-medium">March 2024</span>
+              <FileText size={11} className="text-slate-300" />
+              Denial letter <span className="text-slate-600 font-medium">included</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <Briefcase size={11} className="text-slate-300" />
-              Past work <span className="text-slate-600 font-medium">Data entry clerk</span>
+              <Search size={11} className="text-slate-300" />
+              Doctor records <span className="text-slate-600 font-medium">searchable</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <MapPin size={11} className="text-slate-300" />
-              <span className="text-slate-600 font-medium">Lakeview, CA</span>
+              <ShieldCheck size={11} className="text-slate-300" />
+              Social Security rules <span className="text-slate-600 font-medium">searchable</span>
             </span>
           </motion.div>
         </div>
