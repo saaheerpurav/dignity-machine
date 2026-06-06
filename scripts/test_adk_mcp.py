@@ -31,7 +31,7 @@ async def main() -> int:
             "dignity_search_ssa_forms",
             "dignity_search_case_documents",
             "dignity_search_case_memory",
-            "dignity_get_maria_documents",
+            "dignity_get_case_documents",
             "dignity_get_advocate_contact",
         ],
     )

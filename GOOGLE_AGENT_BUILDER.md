@@ -1,14 +1,8 @@
 # Google Agent Builder Connection
 
-Dignity Machine uses the Vertex AI Agent Builder path through ADK:
-
-- Gemini model orchestration through Google ADK / Vertex AI Agent Builder.
-- Elastic Agent Builder MCP as the partner MCP server.
-- Elastic indexes as the evidence and memory layer.
+Dignity Machine uses Google ADK/Gemini for orchestration and Elastic Agent Builder MCP for global retrieval tools.
 
 ## Elastic MCP Endpoint
-
-The Elastic MCP endpoint is:
 
 ```text
 {KIBANA_URL}/api/agent_builder/mcp
@@ -21,30 +15,27 @@ Authorization: ApiKey {ELASTIC_API_KEY}
 kbn-xsrf: true
 ```
 
-The endpoint has been smoke-tested with the MCP `initialize` and `tools/list` methods. It exposes:
+The current manifest exposes:
 
 - `dignity_search_ssa_policy`
 - `dignity_search_ssa_forms`
 - `dignity_search_case_documents`
 - `dignity_search_case_memory`
-- `dignity_get_maria_documents`
+- `dignity_get_case_documents`
 - `dignity_get_advocate_contact`
 
-Verified locally:
+The live FastAPI app does not give the agent generic case-document MCP access for selected-case evidence. It builds per-request ADK agents with backend-owned scoped tools:
 
-```text
-adk_mcp_tool_count=6
+- `list_case_documents()`
+- `search_case_documents(query)`
+
+Those functions close over the selected `case_id` and always apply an Elastic `term` filter.
+
+## Upload Or Update Tools
+
+```powershell
+python scripts/create_agent_builder_tools.py
 ```
-
-## Local ADK Agent
-
-The ADK agent lives in:
-
-```text
-dignity_agent/agent.py
-```
-
-It loads `.env`, connects to Elastic MCP, filters to the six Dignity Machine tools, and defines the Maria Lopez workflow prompt.
 
 Validate ADK tool discovery:
 
@@ -52,42 +43,32 @@ Validate ADK tool discovery:
 python scripts/test_adk_mcp.py
 ```
 
-Run locally with ADK after Google auth/model credentials are configured:
+Expected output includes the six MCP tools listed above.
 
-```powershell
-adk run dignity_agent
+## Local ADK Agent
+
+The ADK agent factory lives in:
+
+```text
+dignity_agent/agent.py
 ```
 
-Current blocker for a full Gemini run:
+`build_agents(...)` accepts scoped case-document functions and returns:
 
-- Elastic MCP discovery works.
-- Vertex AI API is enabled on the current GCP project.
-- Local ADK model execution still needs either Application Default Credentials or a Gemini API key.
+- the full orchestrator agent
+- the denial-analysis specialist
 
-The attempted Vertex run failed with missing local ADC. To fix that, run:
+Full model execution requires Google model credentials. Use Vertex AI with Application Default Credentials or configure a Gemini API key.
 
-```powershell
-gcloud auth application-default login
-```
-
-Then run:
+For Vertex AI-backed local runs:
 
 ```powershell
 $env:GOOGLE_GENAI_USE_VERTEXAI="TRUE"
-$env:GOOGLE_CLOUD_PROJECT="integral-tensor-497618-a8"
+$env:GOOGLE_CLOUD_PROJECT="your-gcp-project-id"
 $env:GOOGLE_CLOUD_LOCATION="us-central1"
-adk run dignity_agent "List the Maria demo documents using the Elastic MCP tool, then summarize the denial in one sentence." --in_memory --timeout 90s
 ```
 
-For Vertex AI-backed local runs, set:
-
-```env
-GOOGLE_GENAI_USE_VERTEXAI=TRUE
-GOOGLE_CLOUD_PROJECT=your-gcp-project-id
-GOOGLE_CLOUD_LOCATION=us-central1
-```
-
-If local Application Default Credentials are missing, run:
+If local Application Default Credentials are missing:
 
 ```powershell
 gcloud auth application-default login

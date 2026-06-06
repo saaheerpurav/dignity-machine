@@ -26,7 +26,7 @@ export function MissingEvidence({ items, loading }: MissingEvidenceProps) {
         <span className="text-2xl font-bold text-amber-400 leading-none">{items.length}</span>
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Missing proof</p>
-          <p className="text-xs text-amber-400 mt-0.5">What Maria may need to add</p>
+          <p className="text-xs text-amber-400 mt-0.5">What this case may need to add</p>
         </div>
       </div>
 

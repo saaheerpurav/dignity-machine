@@ -17,8 +17,6 @@ ROOT = Path(__file__).resolve().parents[1]
 DATASETS = {
     "ssa_policy": ROOT / "data" / "processed" / "ssa_policy.jsonl",
     "ssa_forms": ROOT / "data" / "processed" / "ssa_forms.jsonl",
-    "case_documents": ROOT / "data" / "demo" / "maria_case_documents.jsonl",
-    "advocate_contacts": ROOT / "data" / "demo" / "advocate_contacts.jsonl",
 }
 
 INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
@@ -247,8 +245,6 @@ def validate_records(index_name: str, records: list[dict[str, Any]]) -> None:
     required = {
         "ssa_policy": ["doc_id", "chunk_id", "content", "embedding_text"],
         "ssa_forms": ["doc_id", "chunk_id", "content", "embedding_text"],
-        "case_documents": ["case_id", "doc_id", "document_type", "content", "embedding_text"],
-        "advocate_contacts": ["case_id", "contact_id", "name", "channel", "destination"],
     }[index_name]
     for idx, record in enumerate(records):
         missing = [field for field in required if field not in record]

@@ -3,10 +3,11 @@ import { ArrowLeft, Zap } from 'lucide-react'
 
 interface CaseHeaderProps {
   caseId: string
+  title: string
   onBack: () => void
 }
 
-export function CaseHeader({ caseId, onBack }: CaseHeaderProps) {
+export function CaseHeader({ caseId, title, onBack }: CaseHeaderProps) {
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -18,7 +19,7 @@ export function CaseHeader({ caseId, onBack }: CaseHeaderProps) {
         <button
           onClick={onBack}
           className="text-slate-300 hover:text-slate-600 transition-colors cursor-pointer p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100"
-          aria-label="Back to Maria's documents"
+          aria-label="Back to selected documents"
         >
           <ArrowLeft size={15} />
         </button>
@@ -27,10 +28,14 @@ export function CaseHeader({ caseId, onBack }: CaseHeaderProps) {
           <span className="text-teal-600 font-bold text-sm tracking-widest uppercase">
             Dignity Machine
           </span>
-          <p className="text-[11px] text-slate-400 hidden sm:block">Analyzing Maria's denial</p>
+          <p className="text-[11px] text-slate-400 hidden sm:block">Analyzing selected denial</p>
         </div>
 
-        <span className="text-xs text-slate-300 font-mono hidden md:inline truncate max-w-[220px] ml-2">
+        <span className="text-xs text-slate-400 hidden lg:inline truncate max-w-[260px] ml-2">
+          {title}
+        </span>
+
+        <span className="text-xs text-slate-300 font-mono hidden md:inline truncate max-w-[220px]">
           {caseId}
         </span>
 

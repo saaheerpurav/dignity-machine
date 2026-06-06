@@ -1,10 +1,11 @@
 import * as ScrollArea from '@radix-ui/react-scroll-area'
 import { Shimmer } from '@/components/ui/Shimmer'
 import { Database, Search } from 'lucide-react'
-import type { StructuredResult } from '@/types/api'
+import type { AgentEvent, StructuredResult } from '@/types/api'
 
 interface TechTraceProps {
   structured: StructuredResult | null
+  events: AgentEvent[]
   loading: boolean
   missionId: string | null
 }
@@ -32,8 +33,23 @@ function buildEvents(s: StructuredResult): TraceEvent[] {
   return events
 }
 
-export function TechTrace({ structured, loading, missionId }: TechTraceProps) {
-  const events = structured ? buildEvents(structured) : []
+function eventsFromStream(events: AgentEvent[]): TraceEvent[] {
+  return events
+    .filter(ev => ev.event_type === 'tool_call' || ev.event_type === 'tool_result' || ev.event_type === 'agent_final_response')
+    .map(ev => ({
+      tool: ev.tool_name || ev.event_type || 'agent_event',
+      index: ev.index_name || '',
+      result:
+        ev.event_type === 'tool_call'
+          ? 'called'
+          : ev.event_type === 'tool_result'
+            ? 'returned'
+            : 'final response',
+    }))
+}
+
+export function TechTrace({ structured, events: streamedEvents, loading, missionId }: TechTraceProps) {
+  const events = streamedEvents.length > 0 ? eventsFromStream(streamedEvents) : structured ? buildEvents(structured) : []
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col">

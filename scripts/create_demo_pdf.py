@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "frontend" / "public" / "documents" / "maria-lopez-documents.pdf"
+OUT = ROOT / "frontend" / "public" / "documents" / "example-denial.pdf"
 
 
 PAGES = [
@@ -13,7 +13,7 @@ PAGES = [
         "Notice of Disability Decision",
         "",
         "Date: March 18, 2024",
-        "Claimant: Maria Lopez",
+        "Claimant: Example Claimant",
         "Claim Type: Disability Insurance Benefits",
         "Condition Reviewed: Fibromyalgia",
         "",

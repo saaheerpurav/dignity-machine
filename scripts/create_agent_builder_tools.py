@@ -73,7 +73,7 @@ class KibanaClient:
 
     def update_tool(self, tool: dict[str, Any]) -> Any:
         tool_id = tool["id"]
-        payload = {key: value for key, value in tool.items() if key != "id"}
+        payload = {key: value for key, value in tool.items() if key not in {"id", "type"}}
         return self.request("PUT", f"{self.prefix}/tools/{tool_id}", payload)
 
     def execute_tool(self, tool_id: str, params: dict[str, Any]) -> Any:
@@ -128,10 +128,10 @@ def run(args: argparse.Namespace) -> int:
         tests = {
             "dignity.search_ssa_policy": {"nlQuery": "fibromyalgia severity functional limitations RFC"},
             "dignity.search_ssa_forms": {"nlQuery": "SSA-561 reconsideration deadline good cause late appeal"},
-            "dignity.search_case_documents": {"nlQuery": "Maria missing rheumatology records functional capacity statement"},
-            "dignity.search_case_memory": {"nlQuery": "case_maria_lopez_fibro_001 packet gaps advocate"},
-            "dignity.get_maria_documents": {"case_id": "case_maria_lopez_fibro_001", "limit": 5},
-            "dignity.get_advocate_contact": {"case_id": "case_maria_lopez_fibro_001", "limit": 5},
+            "dignity.search_case_documents": {"nlQuery": "denial missing medical evidence functional capacity statement"},
+            "dignity.search_case_memory": {"nlQuery": "selected case packet gaps advocate"},
+            "dignity.get_case_documents": {"case_id": "case_example_denial_pdf_001", "limit": 5},
+            "dignity.get_advocate_contact": {"case_id": "case_example_denial_pdf_001", "limit": 5},
         }
         for tool_id, params in tests.items():
             print(f"testing {tool_id} ...")

@@ -1,52 +1,5 @@
 import { useState, useCallback } from 'react'
-import type { AnalyzeResponse } from '@/types/api'
-
-const MOCK: AnalyzeResponse = {
-  answer: '',
-  mission_id: 'mock_demo_abc123',
-  mission: 'analyze_denial',
-  writeback_enabled: false,
-  write_counts: {},
-  structured: {
-    denial_summary:
-      "SSA denied Maria Lopez's claim because the file does not yet prove fibromyalgia severity or work-related functional limits.",
-    policy_citations: [
-      {
-        title: 'Social Security rule - Evaluation of Fibromyalgia',
-        url: 'https://secure.ssa.gov/apps10/poms.nsf/lnx/0424515076',
-        excerpt:
-          'Fibromyalgia can be reviewed when the file includes doctor records over time.',
-      },
-    ],
-    medical_evidence: [
-      {
-        doc_id: 'doc_denial_letter_001',
-        index: 'case_documents',
-        excerpt:
-          "The denial says the current records do not clearly prove Maria's work limits.",
-        relevance: 'Core denial reason',
-      },
-    ],
-    missing_evidence: [
-      {
-        item: 'Treating-source RFC statement',
-        reason:
-          'The file needs a clinician statement connecting symptoms to sitting, standing, lifting, attendance, and concentration limits.',
-      },
-    ],
-    records_request_draft:
-      'Dear Records Department,\n\nPlease provide complete rheumatology notes and any functional capacity documentation for Maria Lopez relevant to her disability appeal.',
-    advocate_alert_draft:
-      'Hi Elena, Dignity Machine found missing RFC and longitudinal treatment evidence for Maria Lopez. Please review the drafted records request before sending.',
-    packet_summary:
-      "The review summary should focus on Maria's missing doctor statement, follow-up records, and relevant Social Security rules.",
-    next_actions: [
-      'Request RFC statement from treating rheumatologist',
-      'Collect missing follow-up records',
-      'Have advocate review before sending anything',
-    ],
-  },
-}
+import type { AgentEvent, AnalyzeResponse } from '@/types/api'
 
 function parseSseFrame(frame: string): unknown | null {
   const dataLines = frame
@@ -66,17 +19,23 @@ export function useAnalyze() {
   const [data, setData] = useState<AnalyzeResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [events, setEvents] = useState<AgentEvent[]>([])
+  const [statusMessages, setStatusMessages] = useState<string[]>([])
 
-  const run = useCallback(async (mission: string, writeback: boolean) => {
+  const run = useCallback(async (caseId: string, mission: string, writeback: boolean) => {
     setLoading(true)
     setError(null)
     setData(null)
+    setEvents([])
+    setStatusMessages([])
+
+    const collectedEvents: AgentEvent[] = []
 
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mission, writeback }),
+        body: JSON.stringify({ case_id: caseId, mission, writeback }),
       })
 
       if (!res.ok) {
@@ -86,7 +45,7 @@ export function useAnalyze() {
 
       if (!res.body) {
         const json: AnalyzeResponse = await res.json()
-        setData(json)
+        setData({ ...json, events: collectedEvents })
         return
       }
 
@@ -94,6 +53,23 @@ export function useAnalyze() {
       const decoder = new TextDecoder()
       let buffer = ''
       let result: AnalyzeResponse | null = null
+
+      const handleEvent = (event: { type?: string; message?: string; event?: AgentEvent } | AnalyzeResponse | null) => {
+        if (!event) return
+        if ('type' in event && event.type === 'error') throw new Error(event.message || 'Agent failed')
+        if ('type' in event && event.type === 'status' && event.message) {
+          setStatusMessages(prev => [...prev, event.message as string])
+          return
+        }
+        if ('type' in event && event.type === 'agent_event' && event.event) {
+          collectedEvents.push(event.event)
+          setEvents([...collectedEvents])
+          return
+        }
+        if ('type' in event && event.type === 'result') {
+          result = { ...(event as AnalyzeResponse), events: [...collectedEvents] }
+        }
+      }
 
       while (true) {
         const { value, done } = await reader.read()
@@ -103,26 +79,21 @@ export function useAnalyze() {
         buffer = frames.pop() ?? ''
 
         for (const frame of frames) {
-          const event = parseSseFrame(frame) as { type?: string; message?: string } | AnalyzeResponse | null
-          if (!event) continue
-          if ('type' in event && event.type === 'error') throw new Error(event.message || 'Agent failed')
-          if ('type' in event && event.type === 'result') result = event as AnalyzeResponse
+          handleEvent(parseSseFrame(frame) as { type?: string; message?: string; event?: AgentEvent } | AnalyzeResponse | null)
         }
 
         if (done) break
       }
 
       if (buffer.trim()) {
-        const event = parseSseFrame(buffer) as { type?: string; message?: string } | AnalyzeResponse | null
-        if (event && 'type' in event && event.type === 'error') throw new Error(event.message || 'Agent failed')
-        if (event && 'type' in event && event.type === 'result') result = event as AnalyzeResponse
+        handleEvent(parseSseFrame(buffer) as { type?: string; message?: string; event?: AgentEvent } | AnalyzeResponse | null)
       }
 
       if (!result) throw new Error('Agent stream ended without a result')
       setData(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Agent request failed')
-      setData({ ...MOCK, mission })
+      setData(null)
     } finally {
       setLoading(false)
     }
@@ -131,7 +102,9 @@ export function useAnalyze() {
   const reset = useCallback(() => {
     setData(null)
     setError(null)
+    setEvents([])
+    setStatusMessages([])
   }, [])
 
-  return { data, loading, error, run, reset }
+  return { data, loading, error, events, statusMessages, run, reset }
 }

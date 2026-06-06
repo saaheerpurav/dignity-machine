@@ -11,8 +11,8 @@ const iconMap: Record<string, React.ElementType> = {
 }
 
 const descMap: Record<string, string> = {
-  analyze_denial: 'Explain why Maria was denied',
-  find_missing_evidence: 'Find proof her file still needs',
+  analyze_denial: 'Explain why this denial happened',
+  find_missing_evidence: 'Find proof this case still needs',
   draft_records_request: 'Ask doctors for the missing records',
   prepare_packet: 'Create a summary for a human helper',
 }

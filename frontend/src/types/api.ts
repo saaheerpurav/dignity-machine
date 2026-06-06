@@ -5,10 +5,18 @@ export interface Mission {
 }
 
 export interface ConfigResponse {
-  case_id: string
   missions: Mission[]
   writeback_default: boolean
   gcp_project: string
+}
+
+export interface CaseSummary {
+  case_id: string
+  title: string
+  source_name: string
+  extracted_text_preview: string
+  document_count: number
+  pdf_url?: string | null
 }
 
 export interface PolicyCitation {
@@ -60,4 +68,17 @@ export interface AnalyzeResponse {
   mission?: string
   writeback_enabled: boolean
   write_counts: Record<string, number>
+  events?: AgentEvent[]
+}
+
+export interface AgentEvent {
+  event_id?: string
+  case_id?: string
+  mission_id?: string
+  event_type?: string
+  tool_name?: string
+  index_name?: string
+  input?: unknown
+  output?: unknown
+  created_at?: string
 }

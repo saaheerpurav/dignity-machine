@@ -11,7 +11,7 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from google.adk.runners import Runner
@@ -23,46 +23,45 @@ from pydantic import BaseModel
 ROOT = Path(__file__).resolve().parent
 APP_NAME = "dignity_machine_web"
 USER_ID = "local_tester"
-CASE_ID = "case_maria_lopez_fibro_001"
 
 DEFAULT_QUERY = (
-    "Analyze Maria Lopez's disability denial and prepare the advocate packet. "
-    "Use Elastic tools for case documents, SSA policy, SSA forms, and advocate contact."
+    "Analyze the selected disability denial case and prepare the advocate packet. "
+    "Use scoped case tools for case documents and Elastic tools for SSA policy, forms, and advocate contact."
 )
 MISSION_QUERIES = {
     "analyze_denial": (
-        "Analyze Maria Lopez's denial. Find the denial reason, the cited or implied "
+        "Analyze the selected denial. Find the denial reason, the cited or implied "
         "evidence problems, and the most relevant SSA policy. Keep drafts concise."
     ),
     "find_missing_evidence": (
-        "Focus on possible missing evidence in Maria Lopez's file. Compare the denial, "
+        "Focus on possible missing evidence in the selected case file. Compare the denial, "
         "case documents, and SSA policy. Identify gaps and explain why each matters."
     ),
     "draft_records_request": (
-        "Draft a concise records request for Maria Lopez's missing medical evidence. "
-        "Use case documents, SSA policy, and SSA form guidance. Include what to ask "
-        "Lakeview Rheumatology and the treating provider for."
+        "Draft a concise records request for missing medical evidence. "
+        "Use case documents, SSA policy, and SSA form guidance. If doctor records "
+        "are not present, say they are missing."
     ),
     "prepare_packet": DEFAULT_QUERY,
 }
 QUICK_RESPONSE = (
-    "Hi. This test UI is wired for the Maria Lopez denial-analysis mission. "
-    "Use the default mission query to run Gemini + Elastic MCP. Short greetings "
+    "Hi. This UI is wired for selected-case denial analysis. "
+    "Use a mission button to run Gemini with Elastic-backed tools. Short greetings "
     "are answered locally and do not call the agent."
 )
 DENIAL_TOOL_NAMES = """
-Available Elastic MCP tools for this mission. Use these exact names only:
-- dignity_get_maria_documents
-- dignity_search_case_documents
+Available tools for this mission. Use these exact names only:
+- list_case_documents
+- search_case_documents
 - dignity_search_ssa_policy
 
 Never abbreviate, pluralize, rename, or partially type a tool name. The SSA policy
 search tool is exactly dignity_search_ssa_policy.
 """
 ORCHESTRATOR_TOOL_NAMES = """
-Available Elastic MCP tools for this mission. Use these exact names only:
-- dignity_get_maria_documents
-- dignity_search_case_documents
+Available tools for this mission. Use these exact names only:
+- list_case_documents
+- search_case_documents
 - dignity_search_ssa_policy
 - dignity_search_ssa_forms
 - dignity_get_advocate_contact
@@ -97,10 +96,19 @@ os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "TRUE")
 os.environ.setdefault("GOOGLE_CLOUD_PROJECT", "integral-tensor-497618-a8")
 os.environ.setdefault("GOOGLE_CLOUD_LOCATION", "us-central1")
 
-from dignity_agent.agent import denial_analyst, root_agent  # noqa: E402
+from case_services import (  # noqa: E402
+    CaseError,
+    CaseService,
+    ElasticCaseStore,
+    PdfTextExtractionError,
+    PdfTextExtractor,
+    PdfValidationError,
+)
+from dignity_agent.agent import build_agents  # noqa: E402
 
 
 class AnalyzeRequest(BaseModel):
+    case_id: str
     mission: str = "prepare_packet"
     query: str | None = None
     writeback: bool = False
@@ -117,9 +125,9 @@ app = FastAPI(title="Dignity Machine")
 app.mount("/assets", StaticFiles(directory=ROOT / "static" / "assets"), name="assets")
 app.mount("/documents", StaticFiles(directory=ROOT / "static" / "documents"), name="documents")
 session_service = InMemorySessionService()
-runner = Runner(app_name=APP_NAME, agent=root_agent, session_service=session_service)
-denial_runner = Runner(app_name=APP_NAME + "_denial", agent=denial_analyst, session_service=session_service)
 runner_lock = asyncio.Lock()
+case_store = ElasticCaseStore()
+case_service = CaseService(case_store, PdfTextExtractor())
 
 
 def now_iso() -> str:
@@ -239,6 +247,197 @@ def normalize_structured_urls(structured: dict[str, Any]) -> dict[str, Any]:
     return normalize_urls_deep(structured)
 
 
+def remove_unsupported_medical_evidence(structured: dict[str, Any], case_id: str) -> dict[str, Any]:
+    """Keep medical_evidence limited to actual medical case documents.
+
+    The agent can summarize denial letters, but denial letters are not doctor
+    records. This prevents denial-only PDFs from being displayed as medical
+    findings in the UI.
+    """
+    try:
+        inventory = case_store.list_documents(case_id, limit=50)
+    except Exception as exc:
+        print(f"[WARN] Could not validate medical_evidence for {case_id}: {exc}")
+        return structured
+
+    allowed_types = {"medical_record", "medication_list"}
+    docs_by_id = {
+        str(doc.get("doc_id")): doc
+        for doc in inventory.get("documents", [])
+        if doc.get("doc_id")
+    }
+    allowed_doc_ids = {
+        doc_id
+        for doc_id, doc in docs_by_id.items()
+        if str(doc.get("document_type") or "") in allowed_types
+    }
+
+    filtered: list[dict[str, Any]] = []
+    removed: list[str] = []
+    for item in structured.get("medical_evidence", []) or []:
+        if not isinstance(item, dict):
+            continue
+        doc_id = str(item.get("doc_id") or "")
+        if doc_id in allowed_doc_ids:
+            filtered.append(item)
+        elif doc_id:
+            removed.append(doc_id)
+
+    if removed:
+        structured.setdefault("case_document_warnings", []).append(
+            {
+                "type": "unsupported_medical_evidence_removed",
+                "doc_ids": sorted(set(removed)),
+                "message": "Removed medical_evidence entries that pointed to non-medical case documents.",
+            }
+        )
+    structured["medical_evidence"] = filtered
+    return structured
+
+
+def remove_unavailable_advocate_alert(structured: dict[str, Any], case_id: str) -> dict[str, Any]:
+    alert = str(structured.get("advocate_alert_draft") or "").strip()
+    if not alert:
+        return structured
+    try:
+        result = elastic_request_json(
+            "POST",
+            "/advocate_contacts/_count",
+            {"query": {"term": {"case_id": case_id}}},
+        )
+    except Exception as exc:
+        print(f"[WARN] Could not validate advocate contact for {case_id}: {exc}")
+        return structured
+
+    if int(result.get("count", 0)) > 0:
+        return structured
+
+    structured["advocate_alert_draft"] = ""
+    structured.setdefault("case_document_warnings", []).append(
+        {
+            "type": "advocate_alert_removed",
+            "message": "Removed advocate alert draft because no advocate contact exists for the selected case.",
+        }
+    )
+    next_actions = structured.get("next_actions")
+    if isinstance(next_actions, list):
+        reminder = "Add a trusted advocate contact before drafting or sending an advocate alert."
+        if reminder not in next_actions:
+            next_actions.append(reminder)
+    return structured
+
+
+def unsupported_terms(generated_text: str, case_text: str) -> list[str]:
+    case_lower = case_text.lower()
+    generated_lower = generated_text.lower()
+    terms: set[str] = set()
+    invalid_provider_name_parts = {
+        "a",
+        "an",
+        "and",
+        "claimant",
+        "evidence",
+        "he",
+        "medical",
+        "she",
+        "the",
+        "they",
+        "this",
+    }
+    for match in re.finditer(r"\bDr\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?", generated_text):
+        name = match.group(0)
+        last = name.split()[-1]
+        if last.lower() in invalid_provider_name_parts:
+            continue
+        if name.lower() not in case_lower:
+            terms.add(name)
+            if len(last) > 2:
+                terms.add(last)
+    if re.search(r"\bDr\.(?:\s|\"|,|\.|$)", generated_text) and "dr." not in case_lower:
+        terms.add("Dr.")
+    for phrase in (
+        "findings from treating physician",
+        "normal physical examination",
+        "normal physical examination results",
+        "normal muscle strength",
+        "full range of motion",
+        "joint swelling",
+        "reported daily activities",
+        "primary care physician",
+        "treating physician",
+        "treating source",
+    ):
+        if phrase in generated_lower and phrase not in case_lower:
+            terms.add(phrase)
+    return sorted(terms, key=len, reverse=True)
+
+
+def strip_sentences_with_terms(value: str, terms: list[str]) -> str:
+    if not value or not terms:
+        return value
+    pieces = re.split(r"(?<=[.!?])\s+", value)
+    kept = [
+        piece
+        for piece in pieces
+        if piece and not any(term.lower() in piece.lower() for term in terms)
+    ]
+    return " ".join(kept).strip()
+
+
+def remove_unsupported_generated_case_claims(structured: dict[str, Any], case_id: str) -> dict[str, Any]:
+    generated_text = json.dumps(structured, ensure_ascii=False)
+    try:
+        case_text = case_store.case_text(case_id)
+    except Exception as exc:
+        print(f"[WARN] Could not validate generated case claims for {case_id}: {exc}")
+        return structured
+
+    terms = unsupported_terms(generated_text, case_text)
+    if not terms:
+        return structured
+
+    for key in ("denial_summary", "records_request_draft", "packet_summary"):
+        if isinstance(structured.get(key), str):
+            structured[key] = strip_sentences_with_terms(structured[key], terms)
+
+    filtered_policies = []
+    for citation in structured.get("policy_citations", []) or []:
+        if not isinstance(citation, dict):
+            continue
+        why = str(citation.get("why_it_matters", "") or "")
+        if any(term.lower() in why.lower() for term in terms):
+            continue
+        filtered_policies.append(citation)
+    structured["policy_citations"] = filtered_policies
+
+    filtered_gaps = []
+    for gap in structured.get("missing_evidence", []) or []:
+        if not isinstance(gap, dict):
+            continue
+        gap_text = json.dumps(gap, ensure_ascii=False)
+        if any(term.lower() in gap_text.lower() for term in terms):
+            continue
+        filtered_gaps.append(gap)
+    structured["missing_evidence"] = filtered_gaps
+
+    next_actions = structured.get("next_actions")
+    if isinstance(next_actions, list):
+        structured["next_actions"] = [
+            item
+            for item in next_actions
+            if not any(term.lower() in str(item).lower() for term in terms)
+        ]
+
+    structured.setdefault("case_document_warnings", []).append(
+        {
+            "type": "unsupported_generated_claims_removed",
+            "terms": terms,
+            "message": "Removed generated claims that used names or examination details not present in selected case documents.",
+        }
+    )
+    return structured
+
+
 def quick_local_response(query: str) -> str | None:
     normalized = re.sub(r"[^a-z0-9 ]+", "", query.lower()).strip()
     normalized = re.sub(r"\s+", " ", normalized)
@@ -289,10 +488,13 @@ def mission_instructions(mission: str) -> str:
     )
 
 
-def mission_prompt(user_query: str, mission: str) -> str:
+def mission_prompt(user_query: str, mission: str, case_id: str) -> str:
     tool_names = DENIAL_TOOL_NAMES if mission == "analyze_denial" else ORCHESTRATOR_TOOL_NAMES
     return f"""
 {user_query}
+
+Selected case_id: {case_id}
+Analyze only this selected disability denial case.
 
 Mission-specific instruction:
 {mission_instructions(mission)}
@@ -341,28 +543,35 @@ Use this exact schema:
 }}
 
 Requirements:
-- The demo workflow stage is reconsideration packet preparation. Do not describe the denial as a completed reconsideration denial or as an initial-level denial unless a retrieved document explicitly says that.
-- Use dignity_get_maria_documents first.
-- Use dignity_search_case_documents for denial reason and medical evidence.
+- Do not describe the denial as a completed reconsideration denial or as an initial-level denial unless a retrieved document explicitly says that.
+- Use list_case_documents first.
+- Use search_case_documents for denial reason and uploaded case evidence.
 - Use dignity_search_ssa_policy for fibromyalgia, symptom evaluation, RFC, and medical opinion rules.
 {"" if mission == "analyze_denial" else """- Use dignity_search_ssa_forms for reconsideration, SSA-827, SSA-561, and representative/advocate workflow.
 - Use dignity_get_advocate_contact before drafting the advocate alert.
+- If dignity_get_advocate_contact returns no contact for this case, set advocate_alert_draft to an empty string.
 - Use dignity_search_case_memory if asked about prior saved findings or advocate memory."""}
 - Cite real retrieved doc IDs and policy URLs where available.
 - Prefer HTTPS secure.ssa.gov URLs in citations. Do not output http://policy.ssa.gov URLs.
 - Say "possible missing evidence" if the record only implies a gap.
+- The medical_evidence array is only for retrieved case documents whose document_type is medical_record or medication_list.
+- Do not put denial_letter PDFs, SSA policy, SSA forms, or assumptions in medical_evidence.
+- Every medical_evidence.finding must be directly supported by text returned from search_case_documents.
+- "Evidence We Reviewed" entries in a denial letter only prove the denial says those records were reviewed; they do not prove the contents, findings, provider opinions, or exam results of those records.
+- Do not invent provider names, physical exam findings, normal strength/range-of-motion findings, or doctor statements.
+- If doctor records are not present, set medical_evidence to [] and say they are missing in missing_evidence or next_actions.
 - Do not give legal advice. State that packet content needs human advocate review.
 """
 
 
-def event_to_action_logs(event: Any, mission_id: str) -> list[dict[str, Any]]:
+def event_to_action_logs(event: Any, mission_id: str, case_id: str) -> list[dict[str, Any]]:
     logs: list[dict[str, Any]] = []
     timestamp = now_iso()
     for call in event.get_function_calls() or []:
         logs.append(
             {
                 "event_id": stable_id("event"),
-                "case_id": CASE_ID,
+                "case_id": case_id,
                 "mission_id": mission_id,
                 "event_type": "tool_call",
                 "tool_name": call.name,
@@ -376,7 +585,7 @@ def event_to_action_logs(event: Any, mission_id: str) -> list[dict[str, Any]]:
         logs.append(
             {
                 "event_id": stable_id("event"),
-                "case_id": CASE_ID,
+                "case_id": case_id,
                 "mission_id": mission_id,
                 "event_type": "tool_result",
                 "tool_name": response.name,
@@ -391,7 +600,7 @@ def event_to_action_logs(event: Any, mission_id: str) -> list[dict[str, Any]]:
         logs.append(
             {
                 "event_id": stable_id("event"),
-                "case_id": CASE_ID,
+                "case_id": case_id,
                 "mission_id": mission_id,
                 "event_type": "agent_final_response",
                 "tool_name": getattr(event, "author", None) or "dignity_machine",
@@ -409,7 +618,7 @@ def infer_index_name(tool_name: str) -> str:
         return "ssa_policy"
     if "ssa_forms" in tool_name:
         return "ssa_forms"
-    if "case_documents" in tool_name or "maria_documents" in tool_name:
+    if "case_documents" in tool_name or "list_case_documents" in tool_name or "search_case_documents" in tool_name:
         return "case_documents"
     if "advocate" in tool_name:
         return "advocate_contacts"
@@ -418,8 +627,8 @@ def infer_index_name(tool_name: str) -> str:
     return ""
 
 
-async def repair_agent_json(bad_json_text: str, active_runner: Runner | None = None) -> str:
-    repair_runner = active_runner or runner
+async def repair_agent_json(bad_json_text: str, active_runner: Runner) -> str:
+    repair_runner = active_runner
     session_id = stable_id("repair_session")
     await session_service.create_session(app_name=repair_runner.app_name, user_id=USER_ID, session_id=session_id)
     repair_prompt = f"""
@@ -495,7 +704,7 @@ def elastic_bulk(records_by_index: dict[str, list[dict[str, Any]]]) -> None:
             lines.append(json.dumps(record, ensure_ascii=False, separators=(",", ":")))
     body = ("\n".join(lines) + "\n").encode("utf-8")
     request = Request(
-        f"{elastic_url()}/_bulk",
+        f"{elastic_url()}/_bulk?refresh=true",
         data=body,
         headers=elastic_headers("application/x-ndjson"),
         method="POST",
@@ -517,16 +726,16 @@ def elastic_bulk(records_by_index: dict[str, list[dict[str, Any]]]) -> None:
         raise RuntimeError(f"Elastic bulk write had errors: {failures[:3]}")
 
 
-def reset_demo_writeback() -> dict[str, int]:
+def reset_case_writeback(case_id: str) -> dict[str, int]:
     deleted: dict[str, int] = {}
-    query = {"query": {"term": {"case_id": CASE_ID}}}
+    query = {"query": {"term": {"case_id": case_id}}}
     for index_name in ("evidence_gaps", "appeal_packets", "action_logs"):
         result = elastic_request_json("POST", f"/{index_name}/_delete_by_query?conflicts=proceed&refresh=true", query)
         deleted[index_name] = int(result.get("deleted", 0))
     return deleted
 
 
-def build_writeback(structured: dict[str, Any], action_logs: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+def build_writeback(structured: dict[str, Any], action_logs: list[dict[str, Any]], case_id: str) -> dict[str, list[dict[str, Any]]]:
     created_at = now_iso()
     mission_id = structured["mission_id"]
     gaps: list[dict[str, Any]] = []
@@ -534,9 +743,9 @@ def build_writeback(structured: dict[str, Any], action_logs: list[dict[str, Any]
         gaps.append(
             {
                 "gap_id": stable_id("gap"),
-                "case_id": CASE_ID,
+                "case_id": case_id,
                 "mission_id": mission_id,
-                "condition": "fibromyalgia",
+                "condition": "unknown",
                 "gap_type": str(gap.get("gap_type", "possible_missing_evidence")),
                 "description": str(gap.get("description", "")),
                 "why_it_matters": str(gap.get("why_it_matters", "")),
@@ -549,7 +758,7 @@ def build_writeback(structured: dict[str, Any], action_logs: list[dict[str, Any]
 
     packet = {
         "packet_id": stable_id("packet"),
-        "case_id": CASE_ID,
+        "case_id": case_id,
         "mission_id": mission_id,
         "status": "draft_for_human_review",
         "denial_summary": structured.get("denial_summary", ""),
@@ -570,7 +779,7 @@ def build_writeback(structured: dict[str, Any], action_logs: list[dict[str, Any]
     action_logs.append(
         {
             "event_id": stable_id("event"),
-            "case_id": CASE_ID,
+            "case_id": case_id,
             "mission_id": mission_id,
             "event_type": "writeback_prepared",
             "tool_name": "web_app",
@@ -707,18 +916,17 @@ def icons() -> FileResponse:
 @app.get("/api/config")
 def config() -> dict[str, Any]:
     return {
-        "case_id": CASE_ID,
         "default_mission": "prepare_packet",
         "missions": [
             {
                 "id": "analyze_denial",
                 "label": "Explain the denial",
-                "description": "Explain why Maria was denied.",
+                "description": "Explain why this denial happened.",
             },
             {
                 "id": "find_missing_evidence",
                 "label": "Find missing proof",
-                "description": "Find proof her file still needs.",
+                "description": "Find proof this case still needs.",
             },
             {
                 "id": "draft_records_request",
@@ -737,8 +945,53 @@ def config() -> dict[str, Any]:
     }
 
 
+@app.post("/api/cases/upload")
+async def upload_case(file: UploadFile = File(...)) -> dict[str, Any]:
+    try:
+        data = await file.read()
+        return case_service.create_from_pdf(file.filename or "denial.pdf", file.content_type, data)
+    except PdfTextExtractionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PdfValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/cases/example")
+def use_example_case() -> dict[str, Any]:
+    try:
+        return case_service.ensure_example_case()
+    except (CaseError, PdfTextExtractionError, PdfValidationError) as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+def make_case_tools(case_id: str):
+    def list_case_documents(limit: int = 20) -> dict[str, Any]:
+        """List documents for the selected case. The backend applies the case_id filter."""
+        return case_store.list_documents(case_id=case_id, limit=limit)
+
+    def search_case_documents(query: str, limit: int = 6) -> dict[str, Any]:
+        """Search selected-case documents. The backend applies the case_id filter."""
+        return case_store.search_documents(case_id=case_id, query=query, limit=limit)
+
+    return list_case_documents, search_case_documents
+
+
 @app.post("/api/analyze")
 async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
+    case_id = payload.case_id.strip()
+    if not case_id:
+        raise HTTPException(status_code=400, detail="case_id is required.")
+    try:
+        case_service.summary(case_id)
+    except CaseError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
     if payload.query is not None and payload.query.strip():
         query = payload.query.strip()
         mission = "custom"
@@ -751,11 +1004,14 @@ async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
     quick_answer = quick_local_response(query)
     if quick_answer is not None:
         async def quick_stream():
-            yield f"data: {json.dumps({'type': 'result', 'answer': quick_answer, 'structured': {'case_id': CASE_ID, 'mode': 'local_quick_response', 'message': quick_answer}, 'mission_id': stable_id('quick'), 'writeback_enabled': False, 'write_counts': {}})}\n\n"
+            yield f"data: {json.dumps({'type': 'result', 'answer': quick_answer, 'structured': {'case_id': case_id, 'mode': 'local_quick_response', 'message': quick_answer}, 'mission_id': stable_id('quick'), 'writeback_enabled': False, 'write_counts': {}})}\n\n"
             yield "data: [DONE]\n\n"
         return StreamingResponse(quick_stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
-    # Route analyze_denial to the specialist; everything else to the orchestrator
+    list_tool, search_tool = make_case_tools(case_id)
+    root_agent, denial_analyst = build_agents(list_tool, search_tool)
+    runner = Runner(app_name=f"{APP_NAME}_{case_id}", agent=root_agent, session_service=session_service)
+    denial_runner = Runner(app_name=f"{APP_NAME}_{case_id}_denial", agent=denial_analyst, session_service=session_service)
     active_runner = denial_runner if mission == "analyze_denial" else runner
 
     async def event_stream():
@@ -767,7 +1023,7 @@ async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
             for attempt in range(2):
                 session_id = stable_id("session")
                 await session_service.create_session(app_name=active_runner.app_name, user_id=USER_ID, session_id=session_id)
-                prompt_text = mission_prompt(query, mission)
+                prompt_text = mission_prompt(query, mission, case_id)
                 if attempt:
                     prompt_text = (
                         "The previous attempt failed because a tool name was misspelled. "
@@ -779,7 +1035,7 @@ async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
                 try:
                     async with runner_lock:
                         async for event in active_runner.run_async(user_id=USER_ID, session_id=session_id, new_message=msg):
-                            logs = event_to_action_logs(event, mission_id)
+                            logs = event_to_action_logs(event, mission_id, case_id)
                             action_logs.extend(logs)
                             for log in logs:
                                 yield f"data: {json.dumps({'type': 'agent_event', 'event': log})}\n\n"
@@ -800,12 +1056,15 @@ async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
                 repair_text = await repair_agent_json(final_text, active_runner)
                 structured = parse_agent_json(repair_text)
             structured = normalize_structured_urls(structured)
-            structured["case_id"] = CASE_ID
+            structured = remove_unsupported_medical_evidence(structured, case_id)
+            structured = remove_unsupported_generated_case_claims(structured, case_id)
+            structured = remove_unavailable_advocate_alert(structured, case_id)
+            structured["case_id"] = case_id
             structured["mission_id"] = mission_id
             writeback: dict[str, list[dict[str, Any]]] = {}
             if payload.writeback:
                 yield f"data: {json.dumps({'type': 'status', 'message': 'Writing artifacts to Elastic...'})}\n\n"
-                writeback = build_writeback(structured, action_logs)
+                writeback = build_writeback(structured, action_logs, case_id)
                 elastic_bulk(writeback)
             write_counts = {k: len(v) for k, v in writeback.items()}
             result_payload = {
@@ -827,20 +1086,22 @@ async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
-@app.post("/api/reset-demo-writeback")
-def reset_writeback() -> dict[str, Any]:
+@app.post("/api/cases/{case_id}/writeback/reset")
+def reset_writeback(case_id: str) -> dict[str, Any]:
     try:
-        deleted = reset_demo_writeback()
+        case_service.summary(case_id)
+        deleted = reset_case_writeback(case_id)
+    except CaseError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return {"case_id": CASE_ID, "deleted": deleted}
+    return {"case_id": case_id, "deleted": deleted}
 
 
 @app.get("/api/cases/{case_id}/writeback")
 def get_case_writeback(case_id: str) -> dict[str, Any]:
-    if case_id != CASE_ID:
-        raise HTTPException(status_code=404, detail=f"Case not found: {case_id}")
     try:
+        case_service.summary(case_id)
         def _search(index: str, size: int = 20) -> list[dict[str, Any]]:
             result = elastic_request_json(
                 "POST",
@@ -855,6 +1116,8 @@ def get_case_writeback(case_id: str) -> dict[str, Any]:
             "appeal_packets": _search("appeal_packets", size=5),
             "action_logs": _search("action_logs", size=50),
         }
+    except CaseError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -863,8 +1126,10 @@ def get_case_writeback(case_id: str) -> dict[str, Any]:
 async def send_advocate_alert(payload: AdvocateAlertRequest) -> dict[str, Any]:
     if not payload.approved:
         raise HTTPException(status_code=400, detail="Advocate alert requires explicit approval (approved=true).")
-    if payload.case_id != CASE_ID:
-        raise HTTPException(status_code=404, detail=f"Case not found: {payload.case_id}")
+    try:
+        case_service.summary(payload.case_id)
+    except CaseError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
     twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
     twilio_from = os.getenv("TWILIO_FROM_NUMBER")

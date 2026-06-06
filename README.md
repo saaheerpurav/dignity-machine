@@ -1,26 +1,51 @@
 # Dignity Machine
 
-Dignity Machine is a disability-denial evidence agent. It reads a denial, searches SSA policy and uploaded medical records with Elastic, finds missing evidence, and builds an advocate-ready appeal packet.
+Dignity Machine is a disability-denial evidence agent. It reads one selected denial PDF, saves extracted text in Elastic, searches official SSA/POMS policy, identifies possible missing proof, and builds an advocate-ready review packet.
 
-This repo starts with the data layer: official SSA sources scraped into Elastic-ready JSONL.
+It is not a lawyer, does not guarantee benefits, and does not file anything with SSA.
+
+## Current Flow
+
+The app treats every case the same way:
+
+1. Select the example denial or upload one text-readable denial PDF.
+2. Extract PDF text with `pypdf`.
+3. Store the extracted denial in Elastic `case_documents` with a generated `case_id`.
+4. Run Gemini/ADK against that selected `case_id`.
+5. Case-document tools are backend-owned and always apply a hard Elastic `case_id` filter.
+6. SSA policy/forms search remains global through Elastic Agent Builder MCP.
+7. Optional writeback saves generated gaps, packets, and action logs with the selected `case_id`.
+
+Version 1 supports one PDF per case and does not perform OCR. Scanned/image-only PDFs are rejected.
+
+## Key Endpoints
+
+- `POST /api/cases/example` creates or returns the bundled example case.
+- `POST /api/cases/upload` accepts one PDF and returns `{ case_id, title, source_name, extracted_text_preview, document_count }`.
+- `POST /api/analyze` requires `case_id`.
+- `GET /api/cases/{case_id}/writeback` reads generated artifacts for one case.
+- `POST /api/cases/{case_id}/writeback/reset` deletes generated artifacts for one case.
+
+## Elastic Indexes
+
+- `case_documents` - uploaded/example denial text and future case documents, scoped by `case_id`.
+- `ssa_policy` - official SSA/POMS policy chunks.
+- `ssa_forms` - SSA appeal, authorization, representation, and form-workflow chunks.
+- `advocate_contacts` - optional case-scoped advocate contact metadata.
+- `evidence_gaps` - generated missing-evidence artifacts.
+- `appeal_packets` - generated review packet drafts.
+- `action_logs` - tool calls, tool results, final response previews, and writeback audit events.
+
+The live agent does not use the generic case-document MCP search. It receives scoped backend tools:
+
+- `list_case_documents()`
+- `search_case_documents(query)`
+
+Both close over the selected `case_id` and add an Elastic `term` filter.
 
 ## Scraped Corpus
 
-The scraper indexes official SSA/POMS sources that support the Dignity Machine workflow:
-
-- Medical and nonmedical evidence rules
-- Acceptable medical source and medically determinable impairment guidance
-- Symptom evaluation, including pain, fatigue, consistency, and functional limits
-- Medical-opinion supportability and consistency rules for modern claims
-- Residual functional capacity and sustained-work guidance
-- Fibromyalgia, chronic fatigue syndrome, chronic pain, and related condition guidance
-- Vocational rules, past relevant work, and medical-vocational guidelines
-- Reconsideration, late appeal good cause, hearing request, and forwarding rules
-- SSA-3368, SSA-827, SSA-1696, SSA-561, and HA-501 workflow guidance
-- Adult musculoskeletal listings
-- Adult mental disorder listings and psychiatric review technique guidance
-
-## Run Scraper
+Run the SSA/POMS scraper:
 
 ```powershell
 python scrapers/scrape_ssa.py
@@ -28,128 +53,20 @@ python scrapers/scrape_ssa.py
 
 Outputs:
 
-- `data/raw/*.html` - fetched source HTML
-- `data/processed/ssa_policy.jsonl` - Elastic-ready policy chunks
-- `data/processed/ssa_forms.jsonl` - Elastic-ready form chunks
-- `data/processed/scrape_manifest.json` - run summary
+- `data/raw/*.html`
+- `data/processed/ssa_policy.jsonl`
+- `data/processed/ssa_forms.jsonl`
+- `data/processed/scrape_manifest.json`
 
 Current generated corpus:
 
 - 42 official SSA/POMS source pages
 - 168 `ssa_policy` chunks
 - 105 `ssa_forms` chunks
-- 0 failed sources in the latest manifest
-
-## Demo Case Data
-
-The repo also includes a synthetic claimant packet for the main demo:
-
-- `data/demo/maria_case_profile.json`
-- `data/demo/maria_case_documents.jsonl`
-- `data/demo/advocate_contacts.jsonl`
-
-Demo story:
-
-> Maria Lopez was denied at reconsideration for fibromyalgia because SSA said the record did not establish severity and functional limits. The uploaded packet includes primary-care notes, medication history, symptom journal, work history, function report, and provider list. It intentionally omits rheumatology records and a treating-provider functional-capacity statement so the agent can find real evidence gaps.
-
-## Elastic Index Shape
-
-Each JSONL record includes:
-
-- `doc_id`
-- `chunk_id`
-- `source_type`
-- `title`
-- `section`
-- `url`
-- `retrieved_at`
-- `content`
-- `chunk_index`
-- `condition_tags`
-- `appeal_stage_tags`
-- `embedding_text`
-
-Embeddings are not generated by the scraper. For the Elastic track, prefer Elastic's hybrid/semantic retrieval path over `embedding_text`, `content`, `title`, `section`, `condition_tags`, and `appeal_stage_tags`. Do not make Vertex AI embeddings the default architecture unless the final Elastic setup specifically requires an external embedding model.
-
-## Hackathon Roadmap Selection
-
-The Devpost phases are a build roadmap, not separate submission rounds.
-
-Use this stack:
-
-- **Phase 1:** Google Cloud Agent Builder + Gemini for agent orchestration.
-- **Phase 2:** Elastic-backed tools for retrieval, writeback, packet generation, and action logging.
-- **Phase 3:** Elastic track via Elastic Agent Builder MCP.
-- **Phase 4:** Cloud Run backend only where needed for uploads, SSE events, webhooks, and demo controls.
-- **Phase 5:** Hosted app, public repo, demo video, and safety guardrails.
-
-Elastic must be load-bearing in the final demo: the agent should search Elastic before reasoning, write generated findings back into Elastic, and expose visible MCP/tool traces.
-
-## Google Agent Builder / ADK
-
-The local ADK agent scaffold is in `dignity_agent/agent.py`.
-
-It connects to Elastic Agent Builder MCP at:
-
-```text
-{KIBANA_URL}/api/agent_builder/mcp
-```
-
-Validate MCP tool discovery:
-
-```powershell
-python scripts/test_adk_mcp.py
-```
-
-Expected tools:
-
-- `dignity_search_ssa_policy`
-- `dignity_search_ssa_forms`
-- `dignity_search_case_documents`
-- `dignity_search_case_memory`
-- `dignity_get_maria_documents`
-- `dignity_get_advocate_contact`
-
-Full Gemini execution requires Google model credentials. Use Vertex AI with Application Default Credentials or provide a Gemini API key.
-
-## Minimal Test Web UI
-
-Run the local test UI:
-
-```powershell
-python web_app.py
-```
-
-Open:
-
-```text
-http://127.0.0.1:3000/
-```
-
-This is intentionally minimal and exists for local workflow testing before the real demo UI is built.
-Current behavior:
-
-- Runs ADK/Gemini in-process through FastAPI.
-- Uses Elastic MCP tools through the existing ADK agent.
-- Requests structured JSON from the agent.
-- Uses fixed mission buttons instead of freeform chat:
-  - `Analyze denial`
-  - `Find missing evidence`
-  - `Draft records request`
-  - `Prepare packet`
-- Shows an immediate progress timeline while the live mission runs.
-- Renders Markdown output in the browser.
-- Frontend is in `static/index.html`; backend API code stays in `web_app.py`.
-- Writeback is optional and disabled by default for casual testing.
-- When enabled, writes generated artifacts to Elastic:
-  - `evidence_gaps`
-  - `appeal_packets`
-  - `action_logs`
-- `POST /api/reset-demo-writeback` deletes generated demo artifacts for Maria from those writeback indexes.
 
 ## Ingest Into Elastic
 
-Validate all local JSONL without writing:
+Validate local policy/form JSONL without writing:
 
 ```powershell
 python scripts/ingest_elastic.py --dry-run --create-empty-indexes
@@ -163,30 +80,65 @@ $env:ELASTIC_API_KEY="YOUR-API-KEY"
 python scripts/ingest_elastic.py --create-empty-indexes
 ```
 
+By default, ingestion loads only `ssa_policy` and `ssa_forms`. Runtime uploads populate `case_documents`.
+
 Useful options:
 
 - `--recreate` deletes and recreates selected indexes before ingesting.
 - `--index ssa_policy` ingests only one dataset. Repeat `--index` for multiple datasets.
-- `--create-empty-indexes` also creates workflow indexes for later agent writeback.
+- `--create-empty-indexes` also creates `case_documents`, `advocate_contacts`, `evidence_gaps`, `appeal_packets`, and `action_logs`.
 
-Indexes created/loaded:
+## Agent Builder / ADK
 
-- `ssa_policy`
-- `ssa_forms`
-- `case_documents`
-- `advocate_contacts`
-- `evidence_gaps` empty writeback index
-- `appeal_packets` empty writeback index
-- `action_logs` empty writeback index
+Elastic Agent Builder MCP endpoint:
 
-## Intended Elastic Use
+```text
+{KIBANA_URL}/api/agent_builder/mcp
+```
 
-Use hybrid retrieval over `embedding_text`, `title`, `section`, `condition_tags`, and `appeal_stage_tags`.
+Upload Agent Builder tool definitions:
 
-Core demo queries the app should support:
+```powershell
+python scripts/create_agent_builder_tools.py
+```
 
-- "Why was this fibromyalgia denial weak?"
-- "What evidence is missing for RFC and sustained work?"
-- "Which SSA rules support a records request to the rheumatologist?"
-- "Which appeal forms and deadlines apply at reconsideration?"
-- "What should the advocate packet cite?"
+Validate MCP discovery:
+
+```powershell
+python scripts/test_adk_mcp.py
+```
+
+Expected MCP tools:
+
+- `dignity_search_ssa_policy`
+- `dignity_search_ssa_forms`
+- `dignity_search_case_documents`
+- `dignity_search_case_memory`
+- `dignity_get_case_documents`
+- `dignity_get_advocate_contact`
+
+The app uses MCP for global policy/forms/memory/contact tools. Selected case document search is handled by backend scoped tools.
+
+## Local App
+
+Install dependencies:
+
+```powershell
+pip install -r requirements.txt
+```
+
+Run the app only when you explicitly want a local server:
+
+```powershell
+python web_app.py
+```
+
+Open:
+
+```text
+http://127.0.0.1:3000/
+```
+
+Frontend source is in `frontend/src`. `npm run build` writes the served bundle to `static/`.
+
+Do not commit `.env`.

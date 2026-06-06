@@ -24,12 +24,12 @@
   {
     "id": "dignity.search_case_documents",
     "type": "index_search",
-    "description": "Searches claimant case documents for the Maria Lopez demo case. Use this to retrieve denial reasons, medical notes, medication history, symptom journal entries, work history, function report details, provider list, and missing-record references. This is claimant evidence, not SSA policy.",
-    "tags": ["dignity-machine", "case-documents", "maria-lopez", "elastic-track"],
+    "description": "Searches claimant case documents for a selected case. Use this only when a backend or caller supplies an explicit case_id filter. This is claimant evidence, not SSA policy.",
+    "tags": ["dignity-machine", "case-documents", "elastic-track"],
     "configuration": {
       "pattern": "case_documents",
       "row_limit": 8,
-      "custom_instructions": "Always filter to case_id case_maria_lopez_fibro_001 unless another case_id is explicitly provided. Search content, embedding_text, extracted_fields, condition_tags, document_type, and source_name. Return doc_id, document_type, source_name, title, created_at, and relevant content excerpt."
+      "custom_instructions": "Always require an explicit case_id filter from the caller before returning case documents. Search content, embedding_text, extracted_fields, condition_tags, document_type, and source_name. Return doc_id, document_type, source_name, title, created_at, and relevant content excerpt."
     }
   },
   {
@@ -40,22 +40,22 @@
     "configuration": {
       "pattern": "evidence_gaps,appeal_packets,action_logs,advocate_contacts",
       "row_limit": 10,
-      "custom_instructions": "Search generated case memory. Prefer case_id case_maria_lopez_fibro_001 unless another case_id is explicit. Return IDs, event/tool names, timestamps, statuses, and concise text fields."
+      "custom_instructions": "Search generated case memory. Prefer an explicit case_id supplied by the caller. Return IDs, event/tool names, timestamps, statuses, and concise text fields."
     }
   },
   {
-    "id": "dignity.get_maria_documents",
+    "id": "dignity.get_case_documents",
     "type": "esql",
-    "description": "Lists Maria Lopez demo case documents by type, source, title, and created date. Use this before deeper case-document search to understand what claimant evidence exists and what record types are uploaded.",
+    "description": "Lists selected case documents by type, source, title, and created date. Use this before deeper case-document search to understand what claimant evidence exists and what record types are uploaded.",
     "tags": ["dignity-machine", "case-documents", "inventory", "elastic-track"],
     "configuration": {
       "query": "FROM case_documents | WHERE case_id == ?case_id | KEEP doc_id, document_type, source_name, title, created_at | SORT created_at ASC | LIMIT ?limit",
       "params": {
         "case_id": {
           "type": "string",
-          "description": "Case ID to inspect. Defaults to Maria Lopez demo case.",
+          "description": "Case ID to inspect.",
           "optional": true,
-          "defaultValue": "case_maria_lopez_fibro_001"
+          "defaultValue": ""
         },
         "limit": {
           "type": "integer",
@@ -76,9 +76,9 @@
       "params": {
         "case_id": {
           "type": "string",
-          "description": "Case ID to inspect. Defaults to Maria Lopez demo case.",
+          "description": "Case ID to inspect.",
           "optional": true,
-          "defaultValue": "case_maria_lopez_fibro_001"
+          "defaultValue": ""
         },
         "limit": {
           "type": "integer",

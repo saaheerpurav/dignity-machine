@@ -1,20 +1,21 @@
 # Dignity Machine Data
 
-This folder contains the first Elastic corpus for the Dignity Machine hackathon project.
+This folder contains the official SSA/POMS corpus used by Dignity Machine.
 
 ## Processed Files
 
 - `processed/ssa_policy.jsonl` - SSA policy chunks for medical evidence, symptoms, RFC, vocational rules, condition guidance, and listings.
 - `processed/ssa_forms.jsonl` - SSA appeal, authorization, representation, and form-workflow chunks.
-- `processed/scrape_manifest.json` - Source-by-source scrape status, chunk counts, source URLs, and raw file paths.
+- `processed/scrape_manifest.json` - source-by-source scrape status, chunk counts, source URLs, and raw file paths.
 
-## Demo Files
+## Runtime Case Data
 
-- `demo/maria_case_profile.json` - one-case demo metadata, expected gaps, and intended agent actions.
-- `demo/maria_case_documents.jsonl` - synthetic denial letter, medical notes, medication list, symptom journal, work history, function report, and provider list.
-- `demo/advocate_contacts.jsonl` - synthetic trusted advocate contact for WhatsApp-style alerts.
+Uploaded and example case PDFs are not stored as local JSONL seed files. At runtime:
 
-The Maria documents are intentionally incomplete. Missing rheumatology records and a missing treating-provider functional-capacity statement are the evidence gaps the agent should detect through Elastic retrieval.
+1. FastAPI extracts PDF text with `pypdf`.
+2. The text is indexed into Elastic `case_documents`.
+3. Each document carries a `case_id`.
+4. Agent case tools always search with a hard `case_id` filter.
 
 ## Raw Files
 
@@ -43,12 +44,12 @@ Recommended Elastic indexes:
 - `appeal_packets`
 - `action_logs`
 
-For this hackathon, the preferred retrieval path is Elastic hybrid/semantic search through Elastic Agent Builder MCP. External embeddings are optional, not the default.
-
-Use `scripts/ingest_elastic.py` from the repo root to validate and ingest:
+Use `scripts/ingest_elastic.py` from the repo root to validate and ingest policy/form data:
 
 ```powershell
 python scripts/ingest_elastic.py --dry-run --create-empty-indexes
 ```
 
-Do not treat these records as legal advice. The product should present them as cited policy support for an advocate-ready appeal packet.
+`case_documents` is populated by upload/example API calls, not by local seed files.
+
+Do not treat these records as legal advice. The product should present them as cited policy support for an advocate-ready review packet.

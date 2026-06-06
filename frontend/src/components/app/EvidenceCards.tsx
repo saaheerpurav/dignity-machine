@@ -93,7 +93,7 @@ function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
       <div className="p-5 space-y-2.5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1">Doctor record</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1">Case evidence</p>
             <DocId docId={ev.doc_id} index={ev.index} />
             {ev.title && <p className="text-xs font-semibold text-slate-600 leading-tight mt-1">{ev.title}</p>}
           </div>
@@ -108,7 +108,7 @@ function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
               </div>
             ) : (
               <div className="text-[11px] text-slate-600 leading-relaxed space-y-1">
-                <p><span className="font-semibold text-slate-700">Source:</span> Maria's documents in Elastic</p>
+                <p><span className="font-semibold text-slate-700">Source:</span> Selected case documents in Elastic</p>
                 {ev.title && <p><span className="font-semibold text-slate-700">Document:</span> {ev.title}</p>}
                 <p><span className="font-semibold text-slate-700">ID:</span> <span className="font-mono">{ev.doc_id}</span></p>
               </div>
@@ -160,7 +160,7 @@ function FilterControl({ mode, onChange, counts }: {
 }) {
   const options: { id: FilterMode; label: string; count: number }[] = [
     { id: 'all', label: 'All', count: counts.all },
-    { id: 'medical', label: 'Medical', count: counts.medical },
+    { id: 'medical', label: 'Case docs', count: counts.medical },
     { id: 'policy', label: 'Policy', count: counts.policy },
   ]
   return (
