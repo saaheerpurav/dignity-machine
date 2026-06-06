@@ -36,7 +36,7 @@ export function TechTrace({ structured, loading, missionId }: TechTraceProps) {
   const events = structured ? buildEvents(structured) : []
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col h-full">
+    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col">
       <div className="px-5 py-4 border-b border-slate-100">
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Agent trace</p>
         {missionId && (
@@ -44,8 +44,8 @@ export function TechTrace({ structured, loading, missionId }: TechTraceProps) {
         )}
       </div>
 
-      <ScrollArea.Root className="flex-1 overflow-hidden">
-        <ScrollArea.Viewport className="h-full max-h-[520px]">
+      <ScrollArea.Root className="max-h-[720px] overflow-hidden">
+        <ScrollArea.Viewport className="max-h-[720px]">
           <div className="p-4 space-y-3">
             {loading && <div className="space-y-4 pt-1"><Shimmer lines={2} /><Shimmer lines={2} /><Shimmer lines={2} /></div>}
 
@@ -63,7 +63,7 @@ export function TechTrace({ structured, loading, missionId }: TechTraceProps) {
                   <Database size={9} className="text-slate-300 shrink-0" />
                   <span className="text-[10px] text-slate-400 font-mono">{ev.index}</span>
                 </div>
-                <p className="text-[11px] text-slate-500 pl-4 leading-relaxed truncate">{ev.result}</p>
+                <p className="text-[11px] text-slate-600 pl-4 leading-relaxed break-words">{ev.result}</p>
                 {i < events.length - 1 && <div className="border-t border-slate-100 mt-2" />}
               </div>
             ))}
