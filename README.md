@@ -1,6 +1,6 @@
 # Dignity Machine
 
-Dignity Machine is a disability-denial evidence agent. It reads one selected denial PDF, saves extracted text in Elastic, searches official SSA/POMS policy, identifies possible missing proof, and builds an advocate-ready review packet.
+Dignity Machine is a disability-denial evidence agent. It reads one selected denial PDF, saves extracted text in Elastic, searches official SSA/POMS policy, identifies possible missing proof, and builds an advocate-ready review summary.
 
 It is not a lawyer, does not guarantee benefits, and does not file anything with SSA.
 
@@ -14,7 +14,7 @@ The app treats every case the same way:
 4. Run Gemini/ADK against that selected `case_id`.
 5. Case-document tools are backend-owned and always apply a hard Elastic `case_id` filter.
 6. SSA policy/forms search remains global through Elastic Agent Builder MCP.
-7. Optional writeback saves generated gaps, packets, and action logs with the selected `case_id`.
+7. Optional writeback saves generated gaps, review summaries, and action logs with the selected `case_id`.
 
 Version 1 supports one PDF per case and does not perform OCR. Scanned/image-only PDFs are rejected.
 
@@ -33,7 +33,7 @@ Version 1 supports one PDF per case and does not perform OCR. Scanned/image-only
 - `ssa_forms` - SSA appeal, authorization, representation, and form-workflow chunks.
 - `advocate_contacts` - optional case-scoped advocate contact metadata.
 - `evidence_gaps` - generated missing-evidence artifacts.
-- `appeal_packets` - generated review packet drafts.
+- `appeal_packets` - generated review summary drafts.
 - `action_logs` - tool calls, tool results, final response previews, and writeback audit events.
 
 The live agent does not use the generic case-document MCP search. It receives scoped backend tools:

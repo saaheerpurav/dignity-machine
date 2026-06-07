@@ -35,7 +35,7 @@
   {
     "id": "dignity.search_case_memory",
     "type": "index_search",
-    "description": "Searches Dignity Machine case memory and generated artifacts. Use this after analysis has started to retrieve previously saved evidence gaps, appeal packets, action logs, and advocate contacts. Not for initial SSA policy search.",
+    "description": "Searches Dignity Machine case memory and generated artifacts. Use this after analysis has started to retrieve previously saved evidence gaps, review summaries, action logs, and advocate contacts. Not for initial SSA policy search.",
     "tags": ["dignity-machine", "case-memory", "writeback", "elastic-track"],
     "configuration": {
       "pattern": "evidence_gaps,appeal_packets,action_logs,advocate_contacts",

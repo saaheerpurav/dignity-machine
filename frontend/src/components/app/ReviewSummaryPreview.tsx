@@ -8,7 +8,7 @@ import { CopyButton } from '@/components/ui/CopyButton'
 import { ApprovalModal } from './ApprovalModal'
 import type { StructuredResult } from '@/types/api'
 
-interface PacketPreviewProps {
+interface ReviewSummaryPreviewProps {
   structured: StructuredResult | null
   loading: boolean
 }
@@ -148,7 +148,7 @@ function InteractiveChecklist({ actions }: { actions: string[] }) {
   )
 }
 
-export function PacketPreview({ structured, loading }: PacketPreviewProps) {
+export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPreviewProps) {
   const [modalOpen, setModalOpen] = useState(false)
 
   if (loading) {
@@ -231,7 +231,7 @@ export function PacketPreview({ structured, loading }: PacketPreviewProps) {
           )}
 
           {packet_summary && (
-            <Section icon={BookOpen} label="Packet summary" accent="bg-violet-50 text-violet-400">
+            <Section icon={BookOpen} label="Review summary" accent="bg-violet-50 text-violet-400">
               <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{packet_summary}</p>
             </Section>
           )}

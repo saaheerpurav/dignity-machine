@@ -25,7 +25,7 @@ APP_NAME = "dignity_machine_web"
 USER_ID = "local_tester"
 
 DEFAULT_QUERY = (
-    "Analyze the selected disability denial case and prepare the advocate packet. "
+    "Analyze the selected disability denial case and prepare the advocate review summary. "
     "Use scoped case tools for case documents and Elastic tools for SSA policy, forms, and advocate contact."
 )
 MISSION_QUERIES = {
@@ -466,7 +466,7 @@ def mission_instructions(mission: str) -> str:
             "and evidence referenced by the denial. Keep missing_evidence brief and only "
             "include gaps explicitly stated or strongly implied by the denial. Set "
             "records_request_draft, advocate_alert_draft, and packet_summary to empty strings. "
-            "Do not draft letters, alerts, or a packet."
+            "Do not draft letters, alerts, or a full review summary."
         )
     if mission == "find_missing_evidence":
         return (
@@ -474,7 +474,7 @@ def mission_instructions(mission: str) -> str:
             "and why each gap matters. Keep denial_summary to one sentence. Include only "
             "policy citations that directly explain why a gap matters. Set "
             "records_request_draft, advocate_alert_draft, and packet_summary to empty strings. "
-            "Do not draft letters, alerts, or a packet."
+            "Do not draft letters, alerts, or a full review summary."
         )
     if mission == "draft_records_request":
         return (
@@ -483,8 +483,8 @@ def mission_instructions(mission: str) -> str:
             "to explain the request."
         )
     return (
-        "This mission is full packet preparation. Include denial summary, evidence found, "
-        "missing evidence, records request draft, advocate alert draft, packet summary, and next actions."
+        "This mission is full review-summary preparation. Include denial summary, evidence found, "
+        "missing evidence, records request draft, advocate alert draft, review summary, and next actions."
     )
 
 
@@ -560,7 +560,7 @@ Requirements:
 - "Evidence We Reviewed" entries in a denial letter only prove the denial says those records were reviewed; they do not prove the contents, findings, provider opinions, or exam results of those records.
 - Do not invent provider names, physical exam findings, normal strength/range-of-motion findings, or doctor statements.
 - If doctor records are not present, set medical_evidence to [] and say they are missing in missing_evidence or next_actions.
-- Do not give legal advice. State that packet content needs human advocate review.
+- Do not give legal advice. State that generated content needs human advocate review.
 """
 
 
@@ -756,7 +756,7 @@ def build_writeback(structured: dict[str, Any], action_logs: list[dict[str, Any]
             }
         )
 
-    packet = {
+    review_summary = {
         "packet_id": stable_id("packet"),
         "case_id": case_id,
         "mission_id": mission_id,
@@ -787,7 +787,7 @@ def build_writeback(structured: dict[str, Any], action_logs: list[dict[str, Any]
             "input": {},
             "output": {
                 "evidence_gap_count": len(gaps),
-                "packet_id": packet["packet_id"],
+                "packet_id": review_summary["packet_id"],
                 "action_log_count": len(action_logs) + 1,
             },
             "created_at": created_at,
@@ -796,7 +796,7 @@ def build_writeback(structured: dict[str, Any], action_logs: list[dict[str, Any]
 
     return {
         "evidence_gaps": gaps,
-        "appeal_packets": [packet],
+        "appeal_packets": [review_summary],
         "action_logs": action_logs,
     }
 
@@ -839,7 +839,7 @@ def append_missing_evidence(lines: list[str], result: dict[str, Any]) -> None:
             lines.append(f"  - Why it matters: {gap['why_it_matters']}")
 
 
-def append_drafts_and_packet(lines: list[str], result: dict[str, Any]) -> None:
+def append_drafts_and_summary(lines: list[str], result: dict[str, Any]) -> None:
     records_request = str(result.get("records_request_draft", "") or "").strip()
     if records_request:
         lines.extend(["", "## Records Request Draft", records_request])
@@ -850,7 +850,7 @@ def append_drafts_and_packet(lines: list[str], result: dict[str, Any]) -> None:
 
     packet_summary = str(result.get("packet_summary", "") or "").strip()
     if packet_summary:
-        lines.extend(["", "## Packet Summary", packet_summary])
+        lines.extend(["", "## Review Summary", packet_summary])
 
 
 def append_writeback(lines: list[str], write_counts: dict[str, int]) -> None:
@@ -886,14 +886,14 @@ def markdown_from_structured(result: dict[str, Any], write_counts: dict[str, int
     if mission == "draft_records_request":
         append_missing_evidence(lines, result)
         append_policy_citations(lines, result)
-        append_drafts_and_packet(lines, result)
+        append_drafts_and_summary(lines, result)
         append_writeback(lines, write_counts)
         return "\n".join(lines)
 
     append_missing_evidence(lines, result)
     append_policy_citations(lines, result)
     append_medical_evidence(lines, result)
-    append_drafts_and_packet(lines, result)
+    append_drafts_and_summary(lines, result)
     append_writeback(lines, write_counts)
     return "\n".join(lines)
 

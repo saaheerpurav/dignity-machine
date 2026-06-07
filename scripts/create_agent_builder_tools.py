@@ -129,7 +129,7 @@ def run(args: argparse.Namespace) -> int:
             "dignity.search_ssa_policy": {"nlQuery": "fibromyalgia severity functional limitations RFC"},
             "dignity.search_ssa_forms": {"nlQuery": "SSA-561 reconsideration deadline good cause late appeal"},
             "dignity.search_case_documents": {"nlQuery": "denial missing medical evidence functional capacity statement"},
-            "dignity.search_case_memory": {"nlQuery": "selected case packet gaps advocate"},
+            "dignity.search_case_memory": {"nlQuery": "selected case review summary gaps advocate"},
             "dignity.get_case_documents": {"case_id": "case_example_denial_pdf_001", "limit": 5},
             "dignity.get_advocate_contact": {"case_id": "case_example_denial_pdf_001", "limit": 5},
         }

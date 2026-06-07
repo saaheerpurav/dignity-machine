@@ -4,7 +4,7 @@ This file is context for a future coding agent with no chat history.
 
 ## Product
 
-Dignity Machine reads one selected disability denial PDF, saves extracted text in Elastic, searches SSA/POMS policy, identifies possible missing proof, and builds an advocate-ready review packet.
+Dignity Machine reads one selected disability denial PDF, saves extracted text in Elastic, searches SSA/POMS policy, identifies possible missing proof, and builds an advocate-ready review summary.
 
 It is not an AI lawyer, does not guarantee benefits, and does not file directly with SSA.
 
@@ -45,7 +45,7 @@ Do not commit `.env`.
 - `ssa_forms` - global SSA forms and appeal workflow chunks.
 - `advocate_contacts` - optional case-scoped advocate contacts.
 - `evidence_gaps` - generated writeback.
-- `appeal_packets` - generated packet drafts.
+- `appeal_packets` - generated review summary drafts.
 - `action_logs` - tool traces and audit events.
 
 Runtime uploads populate `case_documents`. Local seed case JSONL files have been removed.

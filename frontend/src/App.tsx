@@ -11,7 +11,7 @@ import { MissionButtons } from '@/components/app/MissionButtons'
 import { MissionTimeline } from '@/components/app/MissionTimeline'
 import { EvidenceCards } from '@/components/app/EvidenceCards'
 import { MissingEvidence } from '@/components/app/MissingEvidence'
-import { PacketPreview } from '@/components/app/PacketPreview'
+import { ReviewSummaryPreview } from '@/components/app/ReviewSummaryPreview'
 import { TechTrace } from '@/components/app/TechTrace'
 import { WritebackStatus } from '@/components/app/WritebackStatus'
 import { StatsBar } from '@/components/app/StatsBar'
@@ -106,7 +106,7 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
               loading={loading}
             />
             <MissingEvidence items={structured?.missing_evidence ?? []} loading={loading} />
-            <PacketPreview structured={structured} loading={loading} />
+            <ReviewSummaryPreview structured={structured} loading={loading} />
           </div>
           <div className="lg:col-span-1">
             <TechTrace structured={structured} events={events} loading={loading} missionId={data?.mission_id ?? null} />
