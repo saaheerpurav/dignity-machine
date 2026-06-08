@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Disclosure, Transition } from '@headlessui/react'
-import { ChevronDown, FileText, Mail, BookOpen, CheckSquare, Bell, Square, CheckCircle2 } from 'lucide-react'
+import { ChevronDown, FileText, Mail, BookOpen, CheckSquare, Square, CheckCircle2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Shimmer } from '@/components/ui/Shimmer'
 import { CopyButton } from '@/components/ui/CopyButton'
-import { ApprovalModal } from './ApprovalModal'
 import type { StructuredResult } from '@/types/api'
 
 interface ReviewSummaryPreviewProps {
@@ -194,8 +193,6 @@ function buildFullReview(structured: StructuredResult) {
 }
 
 export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPreviewProps) {
-  const [modalOpen, setModalOpen] = useState(false)
-
   if (loading) {
     return (
       <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
@@ -212,7 +209,6 @@ export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPrevi
   const fullReview = buildFullReview(structured)
 
   return (
-    <>
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -268,13 +264,6 @@ export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPrevi
               headerExtra={<CopyButton text={advocate_alert_draft} />}
             >
               <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">{advocate_alert_draft}</pre>
-              <button
-                onClick={() => setModalOpen(true)}
-                className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-teal-500 hover:text-teal-700 cursor-pointer transition-colors"
-              >
-                <Bell size={12} />
-                Review &amp; approve send -&gt;
-              </button>
             </Section>
           )}
 
@@ -297,8 +286,5 @@ export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPrevi
           )}
         </div>
       </motion.div>
-
-      <ApprovalModal open={modalOpen} onOpenChange={setModalOpen} draft={advocate_alert_draft ?? ''} />
-    </>
   )
 }

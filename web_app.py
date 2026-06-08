@@ -53,6 +53,7 @@ DENIAL_TOOL_NAMES = """
 Available tools for this mission. Use these exact names only:
 - list_case_documents
 - search_case_documents
+- list_case_facts
 - dignity_search_ssa_policy
 
 Never abbreviate, pluralize, rename, or partially type a tool name. The SSA policy
@@ -62,6 +63,7 @@ ORCHESTRATOR_TOOL_NAMES = """
 Available tools for this mission. Use these exact names only:
 - list_case_documents
 - search_case_documents
+- list_case_facts
 - dignity_search_ssa_policy
 - dignity_search_ssa_forms
 - dignity_get_advocate_contact
@@ -115,11 +117,26 @@ class AnalyzeRequest(BaseModel):
     writeback: bool = False
 
 
-class AdvocateAlertRequest(BaseModel):
-    case_id: str
-    contact_id: str
-    message: str
-    approved: bool = False
+class CaseFactInput(BaseModel):
+    field: str
+    label: str | None = None
+    value: str
+    source: str = "user_answer"
+
+
+class CaseFactsRequest(BaseModel):
+    facts: list[CaseFactInput]
+
+
+class TaskStatusRequest(BaseModel):
+    task_type: str
+    to_status: str
+    note: str | None = None
+
+
+class CaseActionRequest(BaseModel):
+    action_type: str
+    payload: dict[str, Any] = {}
 
 
 app = FastAPI(title="Dignity Machine")
@@ -144,6 +161,11 @@ def stable_task_id(title: str, reason: str = "") -> str:
     return f"task_{seed[:48] or uuid.uuid4().hex[:12]}"
 
 
+def stable_fact_id(case_id: str, field: str) -> str:
+    seed = re.sub(r"[^a-z0-9]+", "_", f"{case_id}_{field}".lower()).strip("_")
+    return f"fact_{seed[:72] or uuid.uuid4().hex[:12]}"
+
+
 TASK_TYPES = {
     "missing_proof",
     "missing_notice_date",
@@ -156,6 +178,9 @@ TASK_TYPES = {
 }
 TASK_STATUSES = {"suggested", "needs_info", "draft_created", "ready_for_review"}
 TASK_SOURCES = {"denial_letter", "ssa_policy", "agent_inference"}
+FACT_SOURCES = {"user_answer", "agent_extraction", "denial_letter"}
+CASE_ACTION_TYPES = {"google_calendar_opened", "mailto_opened", "fact_saved", "task_status_updated"}
+TASK_UPDATE_STATUSES = {"done", "not_relevant", "needs_info", "suggested", "draft_created", "ready_for_review"}
 
 
 def canonical_mission(mission: str) -> str:
@@ -480,6 +505,38 @@ def parse_loose_date(value: Any) -> datetime | None:
     return None
 
 
+def list_case_facts(case_id: str) -> list[dict[str, Any]]:
+    try:
+        result = elastic_request_json(
+            "POST",
+            "/case_facts/_search",
+            {
+                "query": {"term": {"case_id": case_id}},
+                "sort": [{"updated_at": {"order": "desc"}}, {"created_at": {"order": "desc"}}],
+                "size": 100,
+            },
+        )
+    except RuntimeError as exc:
+        if "index_not_found_exception" not in str(exc) and "HTTP 404" not in str(exc):
+            raise
+        return []
+    return [hit.get("_source", {}) for hit in result.get("hits", {}).get("hits", [])]
+
+
+def case_fact_map(case_id: str) -> dict[str, dict[str, Any]]:
+    facts: dict[str, dict[str, Any]] = {}
+    for fact in list_case_facts(case_id):
+        field = str(fact.get("field", ""))
+        if field and field not in facts:
+            facts[field] = fact
+    return facts
+
+
+def fact_value(facts: dict[str, dict[str, Any]], field: str) -> str:
+    value = facts.get(field, {}).get("value", "")
+    return str(value or "").strip()
+
+
 def find_notice_date(case_text: str) -> datetime | None:
     for pattern in (
         r"\bDate:\s*([A-Z][a-z]+ \d{1,2}, \d{4})",
@@ -498,18 +555,21 @@ def iso_date(value: datetime | None) -> str | None:
     return value.strftime("%Y-%m-%d") if value else None
 
 
-def normalize_deadline(structured: dict[str, Any], case_id: str) -> dict[str, Any]:
+def normalize_deadline(structured: dict[str, Any], case_id: str, facts: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     try:
         case_text = case_store.case_text(case_id)
     except Exception as exc:
         print(f"[WARN] Could not inspect case text for deadline {case_id}: {exc}")
         case_text = ""
+    if facts is None:
+        facts = case_fact_map(case_id)
 
     raw_deadline = structured.get("deadline")
     if not isinstance(raw_deadline, dict):
         raw_deadline = {}
 
-    notice_date = parse_loose_date(raw_deadline.get("notice_date")) or find_notice_date(case_text)
+    fact_notice_date = parse_loose_date(fact_value(facts, "notice_date"))
+    notice_date = fact_notice_date or parse_loose_date(raw_deadline.get("notice_date")) or find_notice_date(case_text)
     assumed_receipt_date = parse_loose_date(raw_deadline.get("assumed_receipt_date"))
     appeal_deadline = parse_loose_date(raw_deadline.get("appeal_deadline"))
     source = str(raw_deadline.get("source") or "").strip()
@@ -518,7 +578,9 @@ def normalize_deadline(structured: dict[str, Any], case_id: str) -> dict[str, An
         assumed_receipt_date = notice_date + timedelta(days=5)
     if assumed_receipt_date and not appeal_deadline:
         appeal_deadline = assumed_receipt_date + timedelta(days=60)
-    if notice_date and not source:
+    if fact_notice_date:
+        source = "user_answer"
+    elif notice_date and not source:
         source = "denial_letter"
 
     structured["deadline"] = {
@@ -532,9 +594,10 @@ def normalize_deadline(structured: dict[str, Any], case_id: str) -> dict[str, An
     return structured
 
 
-def normalize_case_tasks(structured: dict[str, Any], case_text: str = "") -> dict[str, Any]:
+def normalize_case_tasks(structured: dict[str, Any], case_text: str = "", facts: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     tasks: list[dict[str, Any]] = []
     seen: set[str] = set()
+    facts = facts or {}
 
     def add_task(
         task_type: str,
@@ -596,8 +659,9 @@ def normalize_case_tasks(structured: dict[str, Any], case_text: str = "") -> dic
         )
 
     denial_summary = str(structured.get("denial_summary") or "").strip()
-    reason_text = f"{denial_summary}\n{case_text}".lower()
-    if not denial_summary or not any(term in reason_text for term in ("denied", "not disabled", "insufficient", "does not show", "does not demonstrate", "work")):
+    saved_denial_reason = fact_value(facts, "denial_reason")
+    reason_text = f"{denial_summary}\n{case_text}\n{saved_denial_reason}".lower()
+    if not any(term in reason_text for term in ("denied", "not disabled", "insufficient", "does not show", "does not demonstrate", "work")):
         add_task(
             "missing_denial_reason",
             "Confirm denial reason",
@@ -613,6 +677,7 @@ def normalize_case_tasks(structured: dict[str, Any], case_text: str = "") -> dic
             case_text,
             structured.get("denial_summary"),
             structured.get("packet_summary"),
+            " ".join(str(fact.get("value", "")) for fact in facts.values()),
             json.dumps(structured.get("missing_evidence", []), ensure_ascii=False),
         )
     ).lower()
@@ -644,7 +709,7 @@ def normalize_case_tasks(structured: dict[str, Any], case_text: str = "") -> dic
             "needs_info",
         )
 
-    if not any(term in combined_text for term in ("reconsideration", "hearing", "appeal", "initial claim", "initial-level", "review your claim again")):
+    if not any(term in combined_text for term in ("reconsideration", "hearing", "appeal", "initial claim", "initial denial", "initial-level", "appeals council", "review your claim again")):
         add_task(
             "missing_appeal_stage",
             "Confirm appeal stage",
@@ -655,7 +720,8 @@ def normalize_case_tasks(structured: dict[str, Any], case_text: str = "") -> dic
         )
 
     provider_pattern = re.compile(r"\b(Dr\.|doctor|clinic|hospital|medical center|health center|physician|rheumatology|neurology|primary care)\b", re.IGNORECASE)
-    if not provider_pattern.search(combined_text):
+    provider_name = fact_value(facts, "provider_name")
+    if not provider_name and not provider_pattern.search(combined_text):
         add_task(
             "missing_provider",
             "Confirm doctor or clinic names",
@@ -706,13 +772,14 @@ def normalize_case_tasks(structured: dict[str, Any], case_text: str = "") -> dic
 
 
 def normalize_action_plan(structured: dict[str, Any], case_id: str) -> dict[str, Any]:
-    structured = normalize_deadline(structured, case_id)
+    facts = case_fact_map(case_id)
+    structured = normalize_deadline(structured, case_id, facts)
     try:
         case_text = case_store.case_text(case_id)
     except Exception as exc:
         print(f"[WARN] Could not inspect case text for action tasks {case_id}: {exc}")
         case_text = ""
-    structured = normalize_case_tasks(structured, case_text)
+    structured = normalize_case_tasks(structured, case_text, facts)
     return structured
 
 
@@ -721,6 +788,7 @@ def mission_scoped_structured(structured: dict[str, Any], mission: str, case_id:
     structured["mission"] = mission
     if "packet_summary" in structured and "review_summary" not in structured:
         structured["review_summary"] = structured.get("packet_summary")
+    facts = case_fact_map(case_id)
 
     def string_list(value: Any) -> list[str]:
         if isinstance(value, list):
@@ -753,7 +821,7 @@ def mission_scoped_structured(structured: dict[str, Any], mission: str, case_id:
         except Exception as exc:
             print(f"[WARN] Could not inspect case text for missing-evidence tasks {case_id}: {exc}")
             case_text = ""
-        return normalize_case_tasks(scoped, case_text)
+        return normalize_case_tasks(scoped, case_text, facts)
 
     if mission == "draft_records_request":
         try:
@@ -765,17 +833,26 @@ def mission_scoped_structured(structured: dict[str, Any], mission: str, case_id:
         if not records_needed:
             records_needed = ["Medical records referenced by the denial letter"]
         placeholder_fields = string_list(structured.get("placeholder_fields"))
+        provider_name = fact_value(facts, "provider_name")
         provider_pattern = re.compile(r"\b(Dr\.|doctor|clinic|hospital|medical center|health center|physician|rheumatology|neurology|primary care)\b", re.IGNORECASE)
-        if not provider_pattern.search(case_text) and "Doctor or clinic name" not in placeholder_fields:
+        if provider_name:
+            placeholder_fields = [field for field in placeholder_fields if field.lower() not in {"doctor or clinic name", "provider name", "provider/clinic"}]
+        elif not provider_pattern.search(case_text) and "Doctor or clinic name" not in placeholder_fields:
             placeholder_fields.append("Doctor or clinic name")
         if "Patient date of birth" not in placeholder_fields:
             placeholder_fields.append("Patient date of birth")
+        request_context = str(structured.get("request_context") or structured.get("case_context") or "")
+        draft = str(structured.get("records_request_draft", ""))
+        if provider_name and provider_name.lower() not in draft.lower():
+            draft = f"Provider/clinic: {provider_name}\n\n{draft}".strip()
+        if provider_name and provider_name.lower() not in request_context.lower():
+            request_context = f"{request_context} Provider/clinic saved by user: {provider_name}.".strip()
         return {
             "mission": mission,
-            "request_context": str(structured.get("request_context") or structured.get("case_context") or ""),
+            "request_context": request_context,
             "records_needed": records_needed,
             "placeholder_fields": placeholder_fields,
-            "records_request_draft": str(structured.get("records_request_draft", "")),
+            "records_request_draft": draft,
             "human_review_note": str(structured.get("human_review_note", "This request is a draft for human review.")),
         }
 
@@ -791,6 +868,10 @@ def mission_scoped_structured(structured: dict[str, Any], mission: str, case_id:
         "next_actions": string_list(structured.get("next_actions")),
         "human_review_note": str(structured.get("human_review_note", "Generated review summary requires human review.")),
     }
+    provider_name = fact_value(facts, "provider_name")
+    if provider_name and provider_name.lower() not in scoped["records_request_draft"].lower():
+        scoped["records_request_draft"] = f"Provider/clinic: {provider_name}\n\n{scoped['records_request_draft']}".strip()
+    scoped["case_facts"] = list(facts.values())
     return normalize_action_plan(scoped, case_id)
 
 
@@ -816,6 +897,9 @@ def build_action_events(structured: dict[str, Any], mission_id: str, case_id: st
     mission = canonical_mission(mission)
     add("case_text_indexed", "Saved extracted text to Elastic")
     add("case_text_searched", "Searched selected case text")
+    saved_facts = structured.get("case_facts", []) or []
+    if saved_facts:
+        add("case_facts_loaded", "Loaded saved case facts", {"count": len(saved_facts)})
     if mission == "analyze_denial":
         add("denial_analyzed", "Explained denial")
     if mission in {"analyze_denial", "prepare_review_summary"} and structured.get("policy_citations"):
@@ -978,12 +1062,12 @@ def mission_schema(mission: str) -> str:
 
 def mission_tool_requirements(mission: str) -> str:
     if mission == "analyze_denial":
-        return "- Use list_case_documents first.\n- Use search_case_documents for denial reason and uploaded case evidence.\n- Use dignity_search_ssa_policy only for policy needed to explain the denial."
+        return "- Use list_case_documents first.\n- Use list_case_facts after documents.\n- Use search_case_documents for denial reason and uploaded case evidence.\n- Use dignity_search_ssa_policy only for policy needed to explain the denial."
     if mission == "find_missing_evidence":
-        return "- Use list_case_documents first.\n- Use search_case_documents for selected case evidence.\n- Use dignity_search_ssa_policy only to understand why a possible evidence gap matters."
+        return "- Use list_case_documents first.\n- Use list_case_facts after documents.\n- Use search_case_documents for selected case evidence.\n- Use dignity_search_ssa_policy only to understand why a possible evidence gap matters."
     if mission == "draft_records_request":
-        return "- Use list_case_documents first.\n- Use search_case_documents to identify records mentioned by the denial.\n- Use dignity_search_ssa_forms only if needed for SSA-827 or records-release context."
-    return "- Use list_case_documents first.\n- Use search_case_documents for denial reason and uploaded case evidence.\n- Use dignity_search_ssa_policy for disability evaluation rules.\n- Use dignity_search_ssa_forms for reconsideration, SSA-827, SSA-561, and appeal workflow if relevant.\n- Use dignity_search_case_memory only if asked about prior saved findings."
+        return "- Use list_case_documents first.\n- Use list_case_facts after documents and use saved provider facts if present.\n- Use search_case_documents to identify records mentioned by the denial.\n- Use dignity_search_ssa_forms only if needed for SSA-827 or records-release context."
+    return "- Use list_case_documents first.\n- Use list_case_facts after documents and prefer saved user facts.\n- Use search_case_documents for denial reason and uploaded case evidence.\n- Use dignity_search_ssa_policy for disability evaluation rules.\n- Use dignity_search_ssa_forms for reconsideration, SSA-827, SSA-561, and appeal workflow if relevant.\n- Use dignity_search_case_memory only if asked about prior saved findings."
 
 
 def mission_prompt(user_query: str, mission: str, case_id: str) -> str:
@@ -1011,6 +1095,8 @@ Use this exact schema:
 Requirements:
 - Do not describe the denial as a completed reconsideration denial or as an initial-level denial unless a retrieved document explicitly says that.
 {mission_tool_requirements(mission)}
+- Use list_case_facts after list_case_documents. Prefer saved user_answer facts over uncertain extracted facts and over model guesses.
+- If case_facts.notice_date exists, use it for deadline calculation. If case_facts.provider_name exists, use it in records request context.
 - Cite real retrieved doc IDs and policy URLs where available.
 - Prefer HTTPS secure.ssa.gov URLs in citations. Do not output http://policy.ssa.gov URLs.
 - Say "possible missing evidence" if the record only implies a gap.
@@ -1082,10 +1168,12 @@ def infer_index_name(tool_name: str) -> str:
         return "ssa_forms"
     if "case_documents" in tool_name or "list_case_documents" in tool_name or "search_case_documents" in tool_name:
         return "case_documents"
+    if "case_facts" in tool_name or "list_case_facts" in tool_name:
+        return "case_facts"
     if "advocate" in tool_name:
         return "advocate_contacts"
     if "case_memory" in tool_name:
-        return "evidence_gaps,appeal_packets,action_logs,advocate_contacts"
+        return "case_facts,evidence_gaps,review_summaries,action_logs,advocate_contacts"
     return ""
 
 
@@ -1157,6 +1245,9 @@ def elastic_bulk(records_by_index: dict[str, list[dict[str, Any]]]) -> None:
         for record in records:
             document_id = (
                 record.get("gap_id")
+                or record.get("fact_id")
+                or record.get("update_id")
+                or record.get("action_id")
                 or record.get("task_id")
                 or record.get("deadline_id")
                 or record.get("request_id")
@@ -1190,6 +1281,50 @@ def elastic_bulk(records_by_index: dict[str, list[dict[str, Any]]]) -> None:
             if item.get("index", {}).get("error")
         ]
         raise RuntimeError(f"Elastic bulk write had errors: {failures[:3]}")
+
+
+def log_case_action(case_id: str, action_type: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    if action_type not in CASE_ACTION_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unknown action_type: {action_type}")
+    action = {
+        "action_id": stable_id("action"),
+        "case_id": case_id,
+        "action_type": action_type,
+        "payload": payload or {},
+        "created_at": now_iso(),
+    }
+    elastic_bulk({"case_actions": [action]})
+    return action
+
+
+def save_case_facts(case_id: str, facts: list[CaseFactInput]) -> list[dict[str, Any]]:
+    existing = case_fact_map(case_id)
+    now = now_iso()
+    records: list[dict[str, Any]] = []
+    for fact in facts:
+        field = re.sub(r"[^a-z0-9_]+", "_", fact.field.lower()).strip("_")
+        value = str(fact.value or "").strip()
+        if not field or not value:
+            continue
+        source = fact.source if fact.source in FACT_SOURCES else "user_answer"
+        previous = existing.get(field, {})
+        records.append(
+            {
+                "fact_id": previous.get("fact_id") or stable_fact_id(case_id, field),
+                "case_id": case_id,
+                "field": field,
+                "label": fact.label or previous.get("label") or field.replace("_", " ").title(),
+                "value": value,
+                "source": source,
+                "confidence": 1.0 if source == "user_answer" else float(previous.get("confidence", 0.7) or 0.7),
+                "created_at": previous.get("created_at") or now,
+                "updated_at": now,
+            }
+        )
+    if records:
+        elastic_bulk({"case_facts": records})
+        log_case_action(case_id, "fact_saved", {"fields": [record["field"] for record in records]})
+    return list_case_facts(case_id)
 
 
 def reset_case_writeback(case_id: str) -> dict[str, int]:
@@ -1582,6 +1717,80 @@ def get_case(case_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+@app.get("/api/cases/{case_id}/facts")
+def get_case_facts(case_id: str) -> dict[str, Any]:
+    try:
+        case_service.summary(case_id)
+        return {"case_id": case_id, "facts": list_case_facts(case_id)}
+    except CaseError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/cases/{case_id}/facts")
+def post_case_facts(case_id: str, payload: CaseFactsRequest) -> dict[str, Any]:
+    try:
+        case_service.summary(case_id)
+        facts = save_case_facts(case_id, payload.facts)
+        return {"case_id": case_id, "facts": facts}
+    except CaseError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/cases/{case_id}/tasks/{task_id}/status")
+def update_case_task_status(case_id: str, task_id: str, payload: TaskStatusRequest) -> dict[str, Any]:
+    try:
+        case_service.summary(case_id)
+        task_type = payload.task_type if payload.task_type in TASK_TYPES else "missing_proof"
+        to_status = payload.to_status if payload.to_status in TASK_UPDATE_STATUSES else ""
+        if not to_status:
+            raise HTTPException(status_code=400, detail=f"Unknown task status: {payload.to_status}")
+        update = {
+            "update_id": stable_id("task_update"),
+            "case_id": case_id,
+            "task_id": task_id,
+            "task_type": task_type,
+            "from_status": "",
+            "to_status": to_status,
+            "note": payload.note or "",
+            "created_at": now_iso(),
+        }
+        action = {
+            "action_id": stable_id("action"),
+            "case_id": case_id,
+            "action_type": "task_status_updated",
+            "payload": {"task_id": task_id, "task_type": task_type, "to_status": to_status, "note": payload.note or ""},
+            "created_at": now_iso(),
+        }
+        elastic_bulk({"case_task_updates": [update], "case_actions": [action]})
+        return {"case_id": case_id, "task_id": task_id, "status": to_status, "logged": True}
+    except CaseError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/cases/{case_id}/actions/log")
+def post_case_action(case_id: str, payload: CaseActionRequest) -> dict[str, Any]:
+    try:
+        case_service.summary(case_id)
+        action = log_case_action(case_id, payload.action_type, payload.payload)
+        return {"case_id": case_id, "action": action, "logged": True}
+    except CaseError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 def make_case_tools(case_id: str):
     def list_case_documents(limit: int = 20) -> dict[str, Any]:
         """List documents for the selected case. The backend applies the case_id filter."""
@@ -1591,7 +1800,11 @@ def make_case_tools(case_id: str):
         """Search selected-case documents. The backend applies the case_id filter."""
         return case_store.search_documents(case_id=case_id, query=query, limit=limit)
 
-    return list_case_documents, search_case_documents
+    def list_case_facts() -> dict[str, Any]:
+        """List saved user-provided and agent-extracted facts for the selected case."""
+        return {"case_id": case_id, "facts": globals()["list_case_facts"](case_id)}
+
+    return list_case_documents, search_case_documents, list_case_facts
 
 
 @app.post("/api/analyze")
@@ -1628,8 +1841,8 @@ async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
             yield "data: [DONE]\n\n"
         return StreamingResponse(quick_stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
-    list_tool, search_tool = make_case_tools(case_id)
-    root_agent, denial_analyst = build_agents(list_tool, search_tool)
+    list_tool, search_tool, facts_tool = make_case_tools(case_id)
+    root_agent, denial_analyst = build_agents(list_tool, search_tool, facts_tool)
     runner = Runner(app_name=f"{APP_NAME}_{case_id}", agent=root_agent, session_service=session_service)
     denial_runner = Runner(app_name=f"{APP_NAME}_{case_id}_denial", agent=denial_analyst, session_service=session_service)
     active_runner = denial_runner if mission == "analyze_denial" else runner
@@ -1743,7 +1956,10 @@ def get_case_writeback(case_id: str) -> dict[str, Any]:
 
         return {
             "case_id": case_id,
+            "case_facts": _search("case_facts"),
             "case_tasks": _search("case_tasks"),
+            "case_task_updates": _search("case_task_updates"),
+            "case_actions": _search("case_actions", size=50),
             "deadline_tasks": _search("deadline_tasks", size=5),
             "evidence_gaps": _search("evidence_gaps"),
             "records_requests": _search("records_requests", size=5),
@@ -1755,46 +1971,6 @@ def get_case_writeback(case_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-
-@app.post("/api/actions/send-advocate-alert")
-async def send_advocate_alert(payload: AdvocateAlertRequest) -> dict[str, Any]:
-    if not payload.approved:
-        raise HTTPException(status_code=400, detail="Advocate alert requires explicit approval (approved=true).")
-    try:
-        case_service.summary(payload.case_id)
-    except CaseError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
-    twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
-    twilio_from = os.getenv("TWILIO_FROM_NUMBER")
-    creds_present = all([twilio_sid, twilio_token, twilio_from])
-    log_entry: dict[str, Any] = {
-        "event_id": stable_id("event"),
-        "case_id": payload.case_id,
-        "mission_id": "action",
-        "event_type": "advocate_alert_approved",
-        "tool_name": "twilio_whatsapp",
-        "index_name": "action_logs",
-        "input": {"contact_id": payload.contact_id, "message_preview": payload.message[:200]},
-        "output": {"status": "ready" if creds_present else "pending_credentials"},
-        "created_at": now_iso(),
-    }
-    log_written = True
-    try:
-        elastic_bulk({"action_logs": [log_entry]})
-    except Exception as exc:
-        log_written = False
-        print(f"[WARN] Failed to write advocate-alert audit log to Elastic: {exc}")
-    if not creds_present:
-        return {
-            "status": "pending_configuration",
-            "message": "Alert approved" + (" and logged to Elastic." if log_written else " (Elastic log failed).") + " Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER to .env to enable WhatsApp send.",
-            "case_id": payload.case_id,
-            "contact_id": payload.contact_id,
-            "log_written": log_written,
-        }
-    return {"status": "ready", "message": "Twilio credentials present. Send pending final implementation.", "case_id": payload.case_id, "log_written": log_written}
 
 
 if __name__ == "__main__":

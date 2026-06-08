@@ -23,6 +23,7 @@ DENIAL_TOOL_NAMES = """
 Available tools for this specialist. Use these exact names only:
 - list_case_documents
 - search_case_documents
+- list_case_facts
 - dignity_search_ssa_policy
 
 Never abbreviate, pluralize, rename, or partially type a tool name. The SSA
@@ -33,6 +34,7 @@ ORCHESTRATOR_TOOL_NAMES = """
 Available tools for this orchestrator. Use these exact names only:
 - list_case_documents
 - search_case_documents
+- list_case_facts
 - dignity_search_ssa_policy
 - dignity_search_ssa_forms
 - dignity_get_advocate_contact
@@ -60,10 +62,12 @@ def _mcp_tools(tool_filter: list[str]) -> MCPToolset:
 def build_agents(
     list_case_documents: Callable[..., dict[str, Any]],
     search_case_documents: Callable[..., dict[str, Any]],
+    list_case_facts: Callable[..., dict[str, Any]],
 ) -> tuple[Agent, Agent]:
     scoped_case_tools = [
         FunctionTool(list_case_documents),
         FunctionTool(search_case_documents),
+        FunctionTool(list_case_facts),
     ]
 
     denial_policy_tools = _mcp_tools(["dignity_search_ssa_policy"])
@@ -91,8 +95,9 @@ Your job is precise and focused:
 {exact_tool_names}
 
 1. Use list_case_documents to see what documents exist in the selected case.
-2. Use search_case_documents to retrieve the denial notice and understand the denial reason.
-3. Use dignity_search_ssa_policy to find SSA/POMS rules for the denial issues,
+2. Use list_case_facts to see saved user-provided facts for this case.
+3. Use search_case_documents to retrieve the denial notice and understand the denial reason.
+4. Use dignity_search_ssa_policy to find SSA/POMS rules for the denial issues,
    medically determinable impairment, symptom evaluation, RFC, and medical opinions,
    only when those rules directly explain or contradict the denial reason.
 
@@ -139,16 +144,20 @@ Analyze the selected disability denial case.
 
 Required workflow:
 1. Use list_case_documents to inspect the selected case documents.
-2. Use search_case_documents to retrieve the denial reason and any uploaded case evidence.
-3. Use dignity_search_ssa_policy to retrieve relevant SSA/POMS policy for the denial issue,
+2. Use list_case_facts to inspect saved user-provided facts. Prefer user_answer facts over uncertain extracted facts.
+3. Use search_case_documents to retrieve the denial reason and any uploaded case evidence.
+4. Use dignity_search_ssa_policy to retrieve relevant SSA/POMS policy for the denial issue,
    medically determinable impairment, symptom evaluation, RFC, sustained work,
    medical opinions, and vocational rules.
-4. Use dignity_search_ssa_forms for reconsideration, SSA-561, SSA-827, SSA-1696,
+5. Use dignity_search_ssa_forms for reconsideration, SSA-561, SSA-827, SSA-1696,
    HA-501, good cause, and representation workflow questions.
-5. Use dignity_get_advocate_contact before drafting any advocate alert. If no advocate
+6. Use dignity_get_advocate_contact before drafting any advocate alert. If no advocate
    contact is present for the selected case, say so and leave the alert draft empty.
-6. Use dignity_search_case_memory if asked about prior saved findings, review summaries,
+7. Use dignity_search_case_memory if asked about prior saved findings, review summaries,
    action logs, or advocate memory.
+
+If saved facts include notice_date, use it for deadline reasoning. If saved facts include
+provider_name, use it in records request drafts instead of leaving the provider blank.
 
 Use only the case documents available through the scoped case tools. If doctor
 records are not present, say they are missing.

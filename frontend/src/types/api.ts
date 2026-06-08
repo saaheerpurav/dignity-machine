@@ -90,6 +90,18 @@ export interface CaseTask {
   source: 'denial_letter' | 'ssa_policy' | 'agent_inference'
 }
 
+export interface CaseFact {
+  fact_id: string
+  case_id: string
+  field: string
+  label: string
+  value: string
+  source: 'user_answer' | 'agent_extraction' | 'denial_letter'
+  confidence: number
+  created_at?: string
+  updated_at?: string
+}
+
 export interface StructuredResult {
   mission?: string
   denial_summary?: string
@@ -111,6 +123,7 @@ export interface StructuredResult {
   review_summary?: string
   human_review_note?: string
   next_actions?: string[]
+  case_facts?: CaseFact[]
   case_id?: string
   mode?: string
 }

@@ -176,6 +176,46 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
             }
         }
     },
+    "case_facts": {
+        "mappings": {
+            "properties": {
+                "fact_id": {"type": "keyword"},
+                "case_id": {"type": "keyword"},
+                "field": {"type": "keyword"},
+                "label": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                "value": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                "source": {"type": "keyword"},
+                "confidence": {"type": "float"},
+                "created_at": {"type": "date"},
+                "updated_at": {"type": "date"},
+            }
+        }
+    },
+    "case_task_updates": {
+        "mappings": {
+            "properties": {
+                "update_id": {"type": "keyword"},
+                "case_id": {"type": "keyword"},
+                "task_id": {"type": "keyword"},
+                "task_type": {"type": "keyword"},
+                "from_status": {"type": "keyword"},
+                "to_status": {"type": "keyword"},
+                "note": {"type": "text"},
+                "created_at": {"type": "date"},
+            }
+        }
+    },
+    "case_actions": {
+        "mappings": {
+            "properties": {
+                "action_id": {"type": "keyword"},
+                "case_id": {"type": "keyword"},
+                "action_type": {"type": "keyword"},
+                "payload": {"type": "object", "enabled": True},
+                "created_at": {"type": "date"},
+            }
+        }
+    },
     "appeal_packets": {
         "mappings": {
             "properties": {

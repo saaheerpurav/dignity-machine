@@ -4,14 +4,20 @@ import { CopyButton } from '@/components/ui/CopyButton'
 import { EvidenceCards } from './EvidenceCards'
 import { MissingEvidence } from './MissingEvidence'
 import { ActionPlan } from './ActionPlan'
+import { CaseFactsPanel } from './CaseFactsPanel'
 import { ReviewSummaryPreview } from './ReviewSummaryPreview'
-import type { StructuredResult } from '@/types/api'
+import type { AgentEvent, CaseFact, StructuredResult } from '@/types/api'
 
 interface MissionResultProps {
+  caseId: string
   structured: StructuredResult | null
   mission: string | null
   loading: boolean
   saved: boolean
+  facts: CaseFact[]
+  onFactsSaved: (facts: CaseFact[]) => void
+  onUpdateActionPlan: () => void
+  onWorkspaceEvent: (event: AgentEvent) => void
 }
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
@@ -28,6 +34,37 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
       <div className="p-5 space-y-4">{children}</div>
     </motion.section>
   )
+}
+
+function workspaceEvent(caseId: string, eventType: string, result: string, output: Record<string, unknown> = {}): AgentEvent {
+  return {
+    event_id: `ui_${eventType}_${Date.now()}`,
+    case_id: caseId,
+    mission_id: 'workspace',
+    event_type: eventType,
+    tool_name: 'case_workspace',
+    index_name: 'case_actions',
+    output: { result, ...output },
+    created_at: new Date().toISOString(),
+  }
+}
+
+function factValue(facts: CaseFact[], field: string) {
+  return facts.find(fact => fact.field === field)?.value?.trim() || ''
+}
+
+function openEmailDraft(caseId: string, facts: CaseFact[], draft: string, humanReviewNote: string | undefined, placeholders: string[] | undefined, onWorkspaceEvent: (event: AgentEvent) => void) {
+  const recipient = factValue(facts, 'provider_email')
+  const warning = placeholders?.length ? `\n\nPlaceholder warning: ${placeholders.join(', ')}` : ''
+  const body = `${draft}${humanReviewNote ? `\n\nHuman review note: ${humanReviewNote}` : ''}${warning}`
+  const mailto = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent('Medical records request for disability appeal')}&body=${encodeURIComponent(body)}`
+  window.location.href = mailto
+  onWorkspaceEvent(workspaceEvent(caseId, 'mailto_opened', 'Opened prefilled email draft', { has_recipient: !!recipient }))
+  fetch(`/api/cases/${encodeURIComponent(caseId)}/actions/log`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action_type: 'mailto_opened', payload: { has_recipient: !!recipient } }),
+  }).catch(() => null)
 }
 
 export function DenialExplanationResult({ structured, loading }: Pick<MissionResultProps, 'structured' | 'loading'>) {
@@ -68,7 +105,7 @@ export function DenialExplanationResult({ structured, loading }: Pick<MissionRes
   )
 }
 
-export function MissingProofResult({ structured, loading, saved }: Pick<MissionResultProps, 'structured' | 'loading' | 'saved'>) {
+export function MissingProofResult({ caseId, structured, loading, saved, facts, onFactsSaved, onUpdateActionPlan, onWorkspaceEvent }: MissionResultProps) {
   if (loading || !structured) return null
   return (
     <div className="space-y-6">
@@ -79,17 +116,27 @@ export function MissingProofResult({ structured, loading, saved }: Pick<MissionR
       )}
       <MissingEvidence items={structured.missing_evidence ?? []} loading={false} />
       <ActionPlan
+        caseId={caseId}
         tasks={structured.case_tasks ?? []}
         showArtifactCards={false}
         saved={saved}
         loading={false}
+        onWorkspaceEvent={onWorkspaceEvent}
+      />
+      <CaseFactsPanel
+        caseId={caseId}
+        tasks={structured.case_tasks ?? []}
+        facts={facts}
+        onSaved={onFactsSaved}
+        onUpdateActionPlan={onUpdateActionPlan}
+        onWorkspaceEvent={onWorkspaceEvent}
       />
       {structured.human_review_note && <p className="text-xs text-slate-400 px-1">{structured.human_review_note}</p>}
     </div>
   )
 }
 
-export function RecordsRequestResult({ structured, loading }: Pick<MissionResultProps, 'structured' | 'loading'>) {
+export function RecordsRequestResult({ caseId, structured, loading, facts, onWorkspaceEvent }: MissionResultProps) {
   if (loading || !structured) return null
   const draft = structured.records_request_draft ?? ''
   return (
@@ -132,7 +179,15 @@ export function RecordsRequestResult({ structured, loading }: Pick<MissionResult
               <ClipboardList size={14} className="text-teal-500" />
               <p className="text-sm font-semibold text-slate-800">Request draft</p>
             </div>
-            <CopyButton text={draft} label="Copy request" />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => openEmailDraft(caseId, facts, draft, structured.human_review_note, structured.placeholder_fields, onWorkspaceEvent)}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-200 hover:text-teal-700"
+              >
+                Open email draft
+              </button>
+              <CopyButton text={draft} label="Copy request" />
+            </div>
           </div>
           <pre className="p-4 text-xs text-slate-700 whitespace-pre-wrap font-mono leading-relaxed bg-slate-50">{draft}</pre>
         </div>
@@ -142,35 +197,60 @@ export function RecordsRequestResult({ structured, loading }: Pick<MissionResult
   )
 }
 
-export function ReviewSummaryResult({ structured, loading, saved }: MissionResultProps) {
+export function ReviewSummaryResult({ caseId, structured, loading, saved, facts, onFactsSaved, onUpdateActionPlan, onWorkspaceEvent }: MissionResultProps) {
   if (loading || !structured) return null
   return (
     <div className="space-y-6">
       <MissingEvidence items={structured.missing_evidence ?? []} loading={false} />
+      <CaseFactsPanel
+        caseId={caseId}
+        tasks={structured.case_tasks ?? []}
+        facts={facts}
+        onSaved={onFactsSaved}
+        onUpdateActionPlan={onUpdateActionPlan}
+        onWorkspaceEvent={onWorkspaceEvent}
+      />
       <ActionPlan
+        caseId={caseId}
         deadline={structured.deadline}
         tasks={structured.case_tasks ?? []}
         hasRecordsDraft={!!structured.records_request_draft}
         hasReviewSummary={!!structured.review_summary || !!structured.denial_summary}
         saved={saved}
         loading={false}
+        onWorkspaceEvent={onWorkspaceEvent}
       />
+      {structured.records_request_draft && (
+        <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Records request action</p>
+            <p className="text-xs text-slate-400 mt-1">Opens a local email draft. Dignity Machine does not send it.</p>
+          </div>
+          <button
+            onClick={() => openEmailDraft(caseId, facts, structured.records_request_draft ?? '', structured.human_review_note, structured.placeholder_fields, onWorkspaceEvent)}
+            className="rounded-xl bg-teal-600 px-3 py-2 text-xs font-semibold text-white hover:bg-teal-700"
+          >
+            Open email draft
+          </button>
+        </div>
+      )}
       <EvidenceCards medical={[]} policy={structured.policy_citations ?? []} loading={false} />
       <ReviewSummaryPreview structured={structured} loading={false} />
     </div>
   )
 }
 
-export function MissionResults({ structured, mission, loading, saved }: MissionResultProps) {
+export function MissionResults(props: MissionResultProps) {
+  const { structured, mission, loading } = props
   const activeMission = mission || structured?.mission
   if (loading) {
     return <Panel title="Working"><div className="shimmer h-20 rounded-xl" /></Panel>
   }
   if (activeMission === 'analyze_denial') return <DenialExplanationResult structured={structured} loading={loading} />
-  if (activeMission === 'find_missing_evidence') return <MissingProofResult structured={structured} loading={loading} saved={saved} />
-  if (activeMission === 'draft_records_request') return <RecordsRequestResult structured={structured} loading={loading} />
+  if (activeMission === 'find_missing_evidence') return <MissingProofResult {...props} />
+  if (activeMission === 'draft_records_request') return <RecordsRequestResult {...props} />
   if (activeMission === 'prepare_review_summary' || activeMission === 'prepare_packet') {
-    return <ReviewSummaryResult structured={structured} mission={activeMission} loading={loading} saved={saved} />
+    return <ReviewSummaryResult {...props} mission={activeMission} />
   }
   return null
 }

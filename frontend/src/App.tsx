@@ -14,7 +14,7 @@ import { TechTrace } from '@/components/app/TechTrace'
 import { WritebackStatus } from '@/components/app/WritebackStatus'
 import { StatsBar } from '@/components/app/StatsBar'
 import { CaseBanner } from '@/components/app/CaseBanner'
-import type { CaseSummary } from '@/types/api'
+import type { AgentEvent, CaseFact, CaseSummary } from '@/types/api'
 
 type View = 'landing' | 'upload' | 'documents' | 'app'
 const SELECTED_CASE_KEY = 'dignity:selected_case_id'
@@ -45,10 +45,40 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
   const { data, loading, error, events, statusMessages, run, reset } = useAnalyze()
   const [activeMission, setActiveMission] = useState<string | null>(null)
   const [writeback, setWriteback] = useState(false)
+  const [facts, setFacts] = useState<CaseFact[]>([])
+  const [workspaceEvents, setWorkspaceEvents] = useState<AgentEvent[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/cases/${encodeURIComponent(selectedCase.case_id)}/facts`)
+      .then(async res => {
+        const json = await res.json().catch(() => null)
+        if (!res.ok) throw new Error(json?.detail || 'Could not load case facts')
+        return json.facts ?? []
+      })
+      .then(nextFacts => {
+        if (!cancelled) setFacts(nextFacts)
+      })
+      .catch(() => {
+        if (!cancelled) setFacts([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedCase.case_id])
 
   const handleMission = (id: string) => {
     setActiveMission(id)
     run(selectedCase.case_id, id, writeback)
+  }
+
+  const updateActionPlan = () => {
+    setActiveMission('prepare_review_summary')
+    run(selectedCase.case_id, 'prepare_review_summary', writeback)
+  }
+
+  const appendWorkspaceEvent = (event: AgentEvent) => {
+    setWorkspaceEvents(prev => [...prev, event])
   }
 
   const handleReset = async () => {
@@ -115,10 +145,20 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <MissionResults structured={structured} mission={resultMission} loading={loading} saved={saved} />
+            <MissionResults
+              caseId={selectedCase.case_id}
+              structured={structured}
+              mission={resultMission}
+              loading={loading}
+              saved={saved}
+              facts={[...facts, ...(structured?.case_facts ?? [])]}
+              onFactsSaved={setFacts}
+              onUpdateActionPlan={updateActionPlan}
+              onWorkspaceEvent={appendWorkspaceEvent}
+            />
           </div>
           <div className="lg:col-span-1">
-            <TechTrace structured={structured} events={events} loading={loading} missionId={data?.mission_id ?? null} />
+            <TechTrace structured={structured} events={[...events, ...workspaceEvents]} loading={loading} missionId={data?.mission_id ?? null} />
           </div>
         </div>
 
