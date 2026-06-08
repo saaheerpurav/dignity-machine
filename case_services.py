@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent
 PDF_UPLOAD_DIR = ROOT / "static" / "documents" / "uploads"
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 SCANNED_PDF_MESSAGE = "No readable text found. Upload a text-based PDF for this demo."
+IRRELEVANT_PDF_MESSAGE = "This PDF does not look like a disability denial letter. Try the example denial or upload a notice from Social Security."
 EXAMPLE_CASE_ID = "case_example_denial_pdf_001"
 EXAMPLE_DOC_ID = "example_denial_pdf_001"
 
@@ -32,6 +33,10 @@ class PdfTextExtractionError(CaseError):
     pass
 
 
+class PdfRelevanceError(CaseError):
+    pass
+
+
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -45,6 +50,18 @@ def preview_text(value: str, limit: int = 900) -> str:
     if len(normalized) <= limit:
         return normalized
     return normalized[: limit - 1].rstrip() + "..."
+
+
+def available_pdf_url(case_id: str, pdf_url: str | None) -> str | None:
+    if not pdf_url:
+        return None
+    if pdf_url == "/documents/example-denial.pdf":
+        return pdf_url
+    prefix = "/documents/uploads/"
+    if pdf_url.startswith(prefix):
+        path = ROOT / "static" / "documents" / "uploads" / Path(pdf_url.removeprefix(prefix)).name
+        return pdf_url if path.exists() else None
+    return pdf_url
 
 
 class PdfTextExtractor:
@@ -64,6 +81,89 @@ class PdfTextExtractor:
         if len(re.sub(r"\s+", "", text)) < 40:
             raise PdfTextExtractionError(SCANNED_PDF_MESSAGE)
         return text
+
+
+class PdfRelevanceClassifier:
+    strong_signals = {
+        "social security": 3,
+        "ssa": 3,
+        "supplemental security income": 3,
+        "disability": 2,
+        "not disabled": 4,
+        "denied": 3,
+        "denial": 3,
+        "medical evidence": 2,
+        "work activity": 2,
+        "appeal": 2,
+        "reconsideration": 2,
+        "determination": 2,
+        "notice date": 2,
+        "60 days": 2,
+    }
+    irrelevant_signals = {
+        "resume",
+        "curriculum vitae",
+        "invoice",
+        "amount due",
+        "subtotal",
+        "purchase order",
+        "quarterly report",
+        "annual report",
+        "abstract",
+        "references",
+    }
+
+    def classify(self, text: str) -> dict[str, Any]:
+        normalized = re.sub(r"\s+", " ", text.lower()).strip()
+        matched = [signal for signal in self.strong_signals if signal in normalized]
+        if "notice date" not in matched and re.search(
+            r"\b(?:notice\s+)?date:\s*(?:[A-Z][a-z]+ \d{1,2}, \d{4}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
+            text,
+            flags=re.IGNORECASE,
+        ):
+            matched.append("notice date")
+        missing = [signal for signal in self.strong_signals if signal not in matched]
+        irrelevant = [signal for signal in self.irrelevant_signals if signal in normalized]
+        score = sum(self.strong_signals[signal] for signal in matched)
+        has_ssa_context = any(signal in matched for signal in ("social security", "ssa", "supplemental security income"))
+        has_disability_context = "disability" in matched or "not disabled" in matched
+        has_denial_context = any(signal in matched for signal in ("denied", "denial", "not disabled", "determination"))
+        has_appeal_context = any(signal in matched for signal in ("appeal", "reconsideration", "60 days"))
+        has_notice_date = "notice date" in matched
+
+        if has_ssa_context and has_disability_context and has_denial_context and has_notice_date and score >= 10:
+            kind = "valid_denial"
+            message = "Readable Social Security disability denial PDF."
+        elif has_ssa_context and has_disability_context and has_denial_context and score >= 10:
+            kind = "possible_denial"
+            message = "Readable PDF, but no notice date found."
+        elif has_disability_context and has_denial_context and score >= 6:
+            kind = "possible_denial"
+            message = "Readable PDF appears to be an incomplete disability denial."
+        elif has_ssa_context and has_disability_context and has_appeal_context and score >= 7:
+            kind = "possible_denial"
+            message = "Readable PDF appears related to a Social Security disability appeal."
+        else:
+            kind = "irrelevant"
+            message = IRRELEVANT_PDF_MESSAGE
+
+        if irrelevant and score < 10:
+            kind = "irrelevant"
+            message = IRRELEVANT_PDF_MESSAGE
+
+        confidence = min(0.98, max(0.05, score / 18))
+        if kind == "irrelevant":
+            confidence = max(0.75, 1 - confidence)
+        elif kind == "possible_denial":
+            confidence = min(confidence, 0.72)
+
+        return {
+            "type": kind,
+            "confidence": round(confidence, 2),
+            "matched_signals": matched,
+            "missing_signals": missing,
+            "message": message,
+        }
 
 
 class ElasticCaseStore:
@@ -164,6 +264,7 @@ class ElasticCaseStore:
                     "title": source.get("title"),
                     "created_at": source.get("created_at"),
                     "pdf_url": source.get("pdf_url") or (source.get("extracted_fields") or {}).get("pdf_url"),
+                    "document_classification": source.get("document_classification"),
                     "content_preview": preview_text(str(source.get("content", "")), 500),
                 }
             )
@@ -248,6 +349,7 @@ class CaseService:
     def __init__(self, store: ElasticCaseStore, extractor: PdfTextExtractor) -> None:
         self.store = store
         self.extractor = extractor
+        self.classifier = PdfRelevanceClassifier()
 
     def validate_pdf_upload(self, filename: str, content_type: str | None, data: bytes) -> None:
         if not filename.lower().endswith(".pdf"):
@@ -262,10 +364,21 @@ class CaseService:
     def create_from_pdf(self, filename: str, content_type: str | None, data: bytes) -> dict[str, Any]:
         self.validate_pdf_upload(filename, content_type, data)
         text = self.extractor.extract(data)
+        classification = self.classifier.classify(text)
+        if classification["type"] == "irrelevant":
+            raise PdfRelevanceError(IRRELEVANT_PDF_MESSAGE)
         case_id = stable_id("case")
         doc_id = stable_id("denial_pdf")
         pdf_url = self._save_uploaded_pdf(case_id, data)
-        return self._index_pdf_text(case_id, doc_id, filename, text, Path(filename).name or "Uploaded denial PDF", pdf_url=pdf_url)
+        return self._index_pdf_text(
+            case_id,
+            doc_id,
+            filename,
+            text,
+            Path(filename).name or "Uploaded denial PDF",
+            pdf_url=pdf_url,
+            classification=classification,
+        )
 
     def ensure_example_case(self) -> dict[str, Any]:
         pdf_path = ROOT / "static" / "documents" / "example-denial.pdf"
@@ -273,7 +386,14 @@ class CaseService:
             pdf_path = ROOT / "frontend" / "public" / "documents" / "example-denial.pdf"
         data = pdf_path.read_bytes()
         text = self.extractor.extract(data)
-        self._index_pdf_text(EXAMPLE_CASE_ID, EXAMPLE_DOC_ID, pdf_path.name, text, "Example denial PDF")
+        self._index_pdf_text(
+            EXAMPLE_CASE_ID,
+            EXAMPLE_DOC_ID,
+            pdf_path.name,
+            text,
+            "Example denial PDF",
+            classification=self.classifier.classify(text),
+        )
         return self.summary(EXAMPLE_CASE_ID)
 
     def summary(self, case_id: str) -> dict[str, Any]:
@@ -282,13 +402,18 @@ class CaseService:
         if not docs:
             raise CaseError(f"Case not found: {case_id}")
         first = docs[0]
+        classification = first.get("document_classification")
+        if not isinstance(classification, dict):
+            classification = self.classifier.classify(self.store.case_text(case_id))
+        pdf_url = first.get("pdf_url") or ("/documents/example-denial.pdf" if case_id == EXAMPLE_CASE_ID else None)
         return {
             "case_id": case_id,
             "title": first.get("title") or "Selected denial case",
             "source_name": first.get("source_name") or "Uploaded PDF",
             "extracted_text_preview": first.get("content_preview") or "",
             "document_count": self.store.case_document_count(case_id),
-            "pdf_url": first.get("pdf_url") or ("/documents/example-denial.pdf" if case_id == EXAMPLE_CASE_ID else None),
+            "pdf_url": available_pdf_url(case_id, pdf_url),
+            "document_classification": classification,
         }
 
     def _save_uploaded_pdf(self, case_id: str, data: bytes) -> str:
@@ -305,6 +430,7 @@ class CaseService:
         text: str,
         source_name: str,
         pdf_url: str | None = None,
+        classification: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         safe_name = Path(filename).name or "denial.pdf"
         title = Path(safe_name).stem.replace("-", " ").replace("_", " ").strip().title() or "Denial PDF"
@@ -318,6 +444,7 @@ class CaseService:
             "content": text,
             "extracted_fields": {"source_filename": safe_name, "pdf_url": pdf_url},
             "pdf_url": pdf_url,
+            "document_classification": classification or self.classifier.classify(text),
             "condition_tags": [],
             "appeal_stage_tags": [],
             "embedding_text": f"{title}\n{source_name}\n{text}",
@@ -331,4 +458,5 @@ class CaseService:
             "extracted_text_preview": preview_text(text),
             "document_count": self.store.case_document_count(case_id),
             "pdf_url": resolved_pdf_url,
+            "document_classification": document["document_classification"],
         }

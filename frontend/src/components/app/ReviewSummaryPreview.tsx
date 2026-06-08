@@ -148,6 +148,51 @@ function InteractiveChecklist({ actions }: { actions: string[] }) {
   )
 }
 
+function buildFullReview(structured: StructuredResult) {
+  const lines: string[] = ['Dignity Machine review summary', '']
+  if (structured.denial_summary) {
+    lines.push('Denial summary', structured.denial_summary, '')
+  }
+  if (structured.policy_citations?.length) {
+    lines.push('Policy citations')
+    structured.policy_citations.forEach(citation => {
+      lines.push(`- ${citation.title}${citation.url ? ` (${citation.url})` : ''}`)
+      if (citation.why_it_matters) lines.push(`  Why it matters: ${citation.why_it_matters}`)
+    })
+    lines.push('')
+  }
+  if (structured.missing_evidence?.length) {
+    lines.push('Possible missing proof')
+    structured.missing_evidence.forEach(item => {
+      lines.push(`- ${item.gap_type ?? item.item ?? 'Missing proof'}: ${item.description ?? item.reason ?? ''}`)
+      if (item.why_it_matters) lines.push(`  Why it matters: ${item.why_it_matters}`)
+    })
+    lines.push('')
+  }
+  if (structured.deadline || structured.case_tasks?.length) {
+    lines.push('Appeal action plan')
+    if (structured.deadline?.appeal_deadline) {
+      lines.push(`- Possible appeal deadline: ${structured.deadline.appeal_deadline}`)
+      lines.push(`  Human review required: ${structured.deadline.human_review_required ? 'yes' : 'no'}`)
+    } else {
+      lines.push('- Possible appeal deadline: notice date needed before calculating.')
+    }
+    structured.case_tasks?.forEach(task => {
+      lines.push(`- ${task.title}: ${task.description}`)
+    })
+    lines.push('')
+  }
+  if (structured.records_request_draft) {
+    lines.push('Records request draft', structured.records_request_draft, '')
+  }
+  const reviewSummary = structured.review_summary ?? structured.packet_summary
+  if (reviewSummary) {
+    lines.push('Review summary', reviewSummary, '')
+  }
+  lines.push('Human review disclaimer', 'This draft is not legal advice. A human advocate should review it before use.')
+  return lines.join('\n')
+}
+
 export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPreviewProps) {
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -161,8 +206,10 @@ export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPrevi
   }
 
   if (!structured) return null
-  const { denial_summary, records_request_draft, advocate_alert_draft, packet_summary, next_actions } = structured
-  if (!denial_summary && !records_request_draft && !packet_summary) return null
+  const { denial_summary, records_request_draft, advocate_alert_draft, next_actions } = structured
+  const reviewSummary = structured.review_summary ?? structured.packet_summary
+  if (!denial_summary && !records_request_draft && !reviewSummary) return null
+  const fullReview = buildFullReview(structured)
 
   return (
     <>
@@ -185,6 +232,7 @@ export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPrevi
         <div className="px-6 py-5 border-b border-slate-100 flex items-baseline gap-3 relative">
           <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Review summary</span>
           <div className="h-px flex-1 bg-slate-100" />
+          <CopyButton text={fullReview} label="Copy full review" />
           <div className="flex items-center gap-1.5 text-xs text-emerald-500 font-medium">
             <span className="relative flex w-1.5 h-1.5">
               <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-75 animate-ping" />
@@ -225,14 +273,14 @@ export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPrevi
                 className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-teal-500 hover:text-teal-700 cursor-pointer transition-colors"
               >
                 <Bell size={12} />
-                Review &amp; approve send →
+                Review &amp; approve send -&gt;
               </button>
             </Section>
           )}
 
-          {packet_summary && (
+          {reviewSummary && (
             <Section icon={BookOpen} label="Review summary" accent="bg-violet-50 text-violet-400">
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{packet_summary}</p>
+              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{reviewSummary}</p>
             </Section>
           )}
 

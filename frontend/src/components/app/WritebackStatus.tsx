@@ -19,7 +19,7 @@ export function WritebackStatus({ enabled, writeCounts }: WritebackStatusProps) 
     >
       <CheckCircle2 size={15} className="text-green-600 shrink-0" />
       <div className="flex flex-wrap gap-3">
-        <span className="text-sm font-medium text-green-800">Saved to Elastic</span>
+        <span className="text-sm font-medium text-green-800">Action plan saved to Elastic</span>
         {Object.entries(writeCounts).map(([index, count]) =>
           count > 0 ? (
             <span key={index} className="text-xs text-green-600 bg-green-100 border border-green-200 rounded px-2 py-0.5 font-mono">

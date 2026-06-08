@@ -109,7 +109,7 @@ export function DocumentPreview({ selectedCase, onBack, onAnalyze }: DocumentPre
                 </div>
                 <h2 className="text-lg font-bold text-slate-900">PDF preview unavailable</h2>
                 <p className="text-sm text-slate-500 leading-relaxed">
-                  Re-upload the denial PDF to open it directly here.
+                  The extracted text is still saved in Elastic. Re-upload the denial PDF if you need to preview the original file.
                 </p>
               </div>
             </div>

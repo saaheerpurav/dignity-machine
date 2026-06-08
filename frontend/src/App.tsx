@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { RotateCcw } from 'lucide-react'
 import { useConfig } from '@/hooks/useConfig'
@@ -9,9 +9,7 @@ import { UploadCase } from '@/components/landing/UploadCase'
 import { CaseHeader } from '@/components/app/CaseHeader'
 import { MissionButtons } from '@/components/app/MissionButtons'
 import { MissionTimeline } from '@/components/app/MissionTimeline'
-import { EvidenceCards } from '@/components/app/EvidenceCards'
-import { MissingEvidence } from '@/components/app/MissingEvidence'
-import { ReviewSummaryPreview } from '@/components/app/ReviewSummaryPreview'
+import { MissionResults } from '@/components/app/MissionResults'
 import { TechTrace } from '@/components/app/TechTrace'
 import { WritebackStatus } from '@/components/app/WritebackStatus'
 import { StatsBar } from '@/components/app/StatsBar'
@@ -19,12 +17,27 @@ import { CaseBanner } from '@/components/app/CaseBanner'
 import type { CaseSummary } from '@/types/api'
 
 type View = 'landing' | 'upload' | 'documents' | 'app'
+const SELECTED_CASE_KEY = 'dignity:selected_case_id'
 
 const pageTransition = {
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -8 },
   transition: { duration: 0.35, ease: 'easeInOut' as const },
+}
+
+function selectedCaseFromUrl() {
+  return new URLSearchParams(window.location.search).get('case')?.trim() || null
+}
+
+function rememberCase(selectedCase: CaseSummary) {
+  localStorage.setItem(SELECTED_CASE_KEY, selectedCase.case_id)
+  window.history.replaceState(null, '', `?case=${encodeURIComponent(selectedCase.case_id)}`)
+}
+
+function clearRememberedCase() {
+  localStorage.removeItem(SELECTED_CASE_KEY)
+  window.history.replaceState(null, '', window.location.pathname)
 }
 
 function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onBack: () => void }) {
@@ -39,7 +52,7 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
   }
 
   const handleReset = async () => {
-    if (!confirm('Delete generated notes for this case from Elastic?')) return
+    if (!confirm('Delete saved action plan for this case from Elastic?')) return
     const res = await fetch(`/api/cases/${encodeURIComponent(selectedCase.case_id)}/writeback/reset`, { method: 'POST' })
     if (res.ok) {
       reset()
@@ -48,6 +61,8 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
   }
 
   const structured = data?.structured ?? null
+  const resultMission = data?.mission ?? activeMission
+  const saved = !!data?.writeback_enabled && Object.values(data.write_counts ?? {}).some(count => count > 0)
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -87,26 +102,20 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
         <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-100">
           <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
             <input type="checkbox" checked={writeback} onChange={e => setWriteback(e.target.checked)} className="accent-teal-600" />
-            Save generated notes in Elastic
+            Save action plan to Elastic
           </label>
           <button onClick={handleReset} className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-red-400 transition-colors cursor-pointer">
             <RotateCcw size={11} />
-            Reset notes
+            Reset action plan
           </button>
         </div>
 
         {data && <WritebackStatus enabled={data.writeback_enabled} writeCounts={data.write_counts} />}
-        {structured && !loading && <StatsBar structured={structured} />}
+        {structured && !loading && <StatsBar mission={resultMission} structured={structured} />}
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <EvidenceCards
-              medical={structured?.medical_evidence ?? []}
-              policy={structured?.policy_citations ?? []}
-              loading={loading}
-            />
-            <MissingEvidence items={structured?.missing_evidence ?? []} loading={loading} />
-            <ReviewSummaryPreview structured={structured} loading={loading} />
+            <MissionResults structured={structured} mission={resultMission} loading={loading} saved={saved} />
           </div>
           <div className="lg:col-span-1">
             <TechTrace structured={structured} events={events} loading={loading} missionId={data?.mission_id ?? null} />
@@ -129,6 +138,56 @@ export default function App() {
   const [selectedCase, setSelectedCase] = useState<CaseSummary | null>(null)
   const [caseLoading, setCaseLoading] = useState(false)
   const [caseError, setCaseError] = useState<string | null>(null)
+  const [restoreLoading, setRestoreLoading] = useState(true)
+
+  useEffect(() => {
+    const restoreCaseId = selectedCaseFromUrl() || localStorage.getItem(SELECTED_CASE_KEY)
+    if (!restoreCaseId) {
+      setRestoreLoading(false)
+      return
+    }
+
+    let cancelled = false
+    fetch(`/api/cases/${encodeURIComponent(restoreCaseId)}`)
+      .then(async res => {
+        const json = await res.json().catch(() => null)
+        if (!res.ok) throw new Error(json?.detail || 'Could not restore case')
+        return json as CaseSummary
+      })
+      .then(restoredCase => {
+        if (cancelled) return
+        setSelectedCase(restoredCase)
+        rememberCase(restoredCase)
+        setView('documents')
+      })
+      .catch(() => {
+        if (cancelled) return
+        clearRememberedCase()
+        setSelectedCase(null)
+        setView('landing')
+      })
+      .finally(() => {
+        if (!cancelled) setRestoreLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const startOver = () => {
+    clearRememberedCase()
+    setSelectedCase(null)
+    setCaseError(null)
+    setView('landing')
+  }
+
+  const beginUpload = () => {
+    clearRememberedCase()
+    setSelectedCase(null)
+    setCaseError(null)
+    setView('upload')
+  }
 
   const loadExample = async () => {
     setCaseLoading(true)
@@ -138,6 +197,7 @@ export default function App() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.detail || 'Could not load example case')
       setSelectedCase(json)
+      rememberCase(json)
       setView('documents')
     } catch (err) {
       setCaseError(err instanceof Error ? err.message : 'Could not load example case')
@@ -149,6 +209,8 @@ export default function App() {
   const uploadPdf = async (file: File) => {
     setCaseLoading(true)
     setCaseError(null)
+    clearRememberedCase()
+    setSelectedCase(null)
     try {
       const form = new FormData()
       form.append('file', file)
@@ -156,12 +218,24 @@ export default function App() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.detail || 'Could not read this PDF')
       setSelectedCase(json)
+      rememberCase(json)
       setView('documents')
     } catch (err) {
       setCaseError(err instanceof Error ? err.message : 'Could not read this PDF')
     } finally {
       setCaseLoading(false)
     }
+  }
+
+  if (restoreLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="space-y-3 text-center">
+          <div className="mx-auto w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 animate-pulse" />
+          <p className="text-sm font-medium text-slate-400">Restoring selected case</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -173,8 +247,7 @@ export default function App() {
             error={caseError}
             onExample={loadExample}
             onUpload={() => {
-              setCaseError(null)
-              setView('upload')
+              beginUpload()
             }}
           />
         </motion.div>
@@ -183,7 +256,7 @@ export default function App() {
           <UploadCase
             loading={caseLoading}
             error={caseError}
-            onBack={() => setView('landing')}
+            onBack={startOver}
             onUpload={uploadPdf}
           />
         </motion.div>
@@ -192,11 +265,11 @@ export default function App() {
           {selectedCase ? (
             <DocumentPreview
               selectedCase={selectedCase}
-              onBack={() => setView('landing')}
+              onBack={startOver}
               onAnalyze={() => setView('app')}
             />
           ) : (
-            <LandingPage loading={caseLoading} error={caseError} onExample={loadExample} onUpload={() => setView('upload')} />
+            <LandingPage loading={caseLoading} error={caseError} onExample={loadExample} onUpload={beginUpload} />
           )}
         </motion.div>
       ) : (
@@ -204,7 +277,7 @@ export default function App() {
           {selectedCase ? (
             <AppDashboard selectedCase={selectedCase} onBack={() => setView('documents')} />
           ) : (
-            <LandingPage loading={caseLoading} error={caseError} onExample={loadExample} onUpload={() => setView('upload')} />
+            <LandingPage loading={caseLoading} error={caseError} onExample={loadExample} onUpload={beginUpload} />
           )}
         </motion.div>
       )}

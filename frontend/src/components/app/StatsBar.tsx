@@ -1,39 +1,54 @@
 import { motion } from 'framer-motion'
-import { FileSearch, AlertTriangle, ListChecks, BookOpen } from 'lucide-react'
+import { AlertTriangle, BookOpen, CheckCircle2, ClipboardList, FileSearch, ListChecks } from 'lucide-react'
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import type { StructuredResult } from '@/types/api'
 
 interface StatsBarProps {
   structured: StructuredResult
+  mission?: string | null
 }
 
-export function StatsBar({ structured }: StatsBarProps) {
-  const stats = [
-    {
-      icon: FileSearch,
-      value: (structured.medical_evidence?.length ?? 0),
-      label: 'Medical records',
-      color: 'text-sky-400 bg-sky-50',
-    },
-    {
-      icon: BookOpen,
-      value: (structured.policy_citations?.length ?? 0),
-      label: 'Policy citations',
-      color: 'text-teal-400 bg-teal-50',
-    },
-    {
-      icon: AlertTriangle,
-      value: (structured.missing_evidence?.length ?? 0),
-      label: 'Evidence gaps',
-      color: 'text-amber-400 bg-amber-50',
-    },
-    {
-      icon: ListChecks,
-      value: (structured.next_actions?.length ?? 0),
-      label: 'Next actions',
-      color: 'text-emerald-400 bg-emerald-50',
-    },
-  ]
+export function StatsBar({ structured, mission }: StatsBarProps) {
+  const activeMission = mission || structured.mission
+  const stats = (() => {
+    if (activeMission === 'analyze_denial') {
+      return [
+        { icon: CheckCircle2, value: structured.denial_summary ? 1 : 0, label: 'Denial read', color: 'text-rose-400 bg-rose-50' },
+        { icon: BookOpen, value: structured.policy_citations?.length ?? 0, label: 'Policy checked', color: 'text-teal-400 bg-teal-50' },
+        { icon: FileSearch, value: structured.evidence_mentioned?.length ?? 0, label: 'Evidence mentioned', color: 'text-sky-400 bg-sky-50' },
+      ]
+    }
+    if (activeMission === 'find_missing_evidence') {
+      const result = [
+        { icon: AlertTriangle, value: structured.missing_evidence?.length ?? 0, label: 'Evidence gaps', color: 'text-amber-400 bg-amber-50' },
+        { icon: ListChecks, value: structured.case_tasks?.length ?? 0, label: 'Action tasks', color: 'text-emerald-400 bg-emerald-50' },
+      ]
+      if (structured.policy_citations?.length) {
+        result.push({ icon: BookOpen, value: structured.policy_citations.length, label: 'Policy references', color: 'text-teal-400 bg-teal-50' })
+      }
+      return result
+    }
+    if (activeMission === 'draft_records_request') {
+      return [
+        { icon: FileSearch, value: structured.records_needed?.length ?? 0, label: 'Records needed', color: 'text-sky-400 bg-sky-50' },
+        { icon: ClipboardList, value: structured.placeholder_fields?.length ?? 0, label: 'Placeholder fields', color: 'text-amber-400 bg-amber-50' },
+        { icon: CheckCircle2, value: structured.records_request_draft ? 1 : 0, label: 'Draft ready', color: 'text-emerald-400 bg-emerald-50' },
+      ]
+    }
+    return [
+      { icon: BookOpen, value: structured.policy_citations?.length ?? 0, label: 'Policy citations', color: 'text-teal-400 bg-teal-50' },
+      { icon: AlertTriangle, value: structured.missing_evidence?.length ?? 0, label: 'Evidence gaps', color: 'text-amber-400 bg-amber-50' },
+      { icon: ListChecks, value: structured.case_tasks?.length ?? 0, label: 'Action tasks', color: 'text-emerald-400 bg-emerald-50' },
+      {
+        icon: FileSearch,
+        value: [structured.denial_summary, structured.records_request_draft, structured.review_summary].filter(Boolean).length,
+        label: 'Review sections',
+        color: 'text-sky-400 bg-sky-50',
+      },
+    ]
+  })()
+
+  if (stats.length === 0) return null
 
   return (
     <motion.div

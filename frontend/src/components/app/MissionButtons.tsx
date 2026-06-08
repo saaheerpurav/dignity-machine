@@ -8,6 +8,7 @@ const iconMap: Record<string, React.ElementType> = {
   find_missing_evidence: FileSearch,
   draft_records_request: FilePlus,
   prepare_packet: Package,
+  prepare_review_summary: Package,
 }
 
 const descMap: Record<string, string> = {
@@ -15,6 +16,7 @@ const descMap: Record<string, string> = {
   find_missing_evidence: 'Find proof this case still needs',
   draft_records_request: 'Ask doctors for the missing records',
   prepare_packet: 'Create a summary for a human helper',
+  prepare_review_summary: 'Create a summary for a human helper',
 }
 
 const labelMap: Record<string, string> = {
@@ -22,6 +24,7 @@ const labelMap: Record<string, string> = {
   find_missing_evidence: 'Find missing proof',
   draft_records_request: 'Draft doctor records request',
   prepare_packet: 'Create review summary',
+  prepare_review_summary: 'Create review summary',
 }
 
 interface MissionButtonsProps {

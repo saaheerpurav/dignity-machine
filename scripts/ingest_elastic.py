@@ -70,6 +70,7 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
                 "title": {"type": "text", "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}},
                 "content": {"type": "text"},
                 "extracted_fields": {"type": "object", "enabled": True},
+                "document_classification": {"type": "object", "enabled": True},
                 "condition_tags": {"type": "keyword"},
                 "appeal_stage_tags": {"type": "keyword"},
                 "embedding_text": {"type": "text"},
@@ -104,6 +105,73 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
                 "supporting_policy_ids": {"type": "keyword"},
                 "supporting_case_doc_ids": {"type": "keyword"},
                 "confidence": {"type": "float"},
+                "created_at": {"type": "date"},
+            }
+        }
+    },
+    "case_tasks": {
+        "mappings": {
+            "properties": {
+                "task_id": {"type": "keyword"},
+                "case_id": {"type": "keyword"},
+                "mission_id": {"type": "keyword"},
+                "task_type": {"type": "keyword"},
+                "title": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                "description": {"type": "text"},
+                "reason": {"type": "text"},
+                "status": {"type": "keyword"},
+                "source": {"type": "keyword"},
+                "created_at": {"type": "date"},
+            }
+        }
+    },
+    "deadline_tasks": {
+        "mappings": {
+            "properties": {
+                "deadline_id": {"type": "keyword"},
+                "case_id": {"type": "keyword"},
+                "mission_id": {"type": "keyword"},
+                "notice_date": {"type": "date"},
+                "assumed_receipt_date": {"type": "date"},
+                "appeal_deadline": {"type": "date"},
+                "confidence": {"type": "float"},
+                "source": {"type": "keyword"},
+                "human_review_required": {"type": "boolean"},
+                "created_at": {"type": "date"},
+            }
+        }
+    },
+    "review_summaries": {
+        "mappings": {
+            "properties": {
+                "summary_id": {"type": "keyword"},
+                "case_id": {"type": "keyword"},
+                "mission_id": {"type": "keyword"},
+                "status": {"type": "keyword"},
+                "denial_summary": {"type": "text"},
+                "policy_citations": {"type": "object", "enabled": True},
+                "missing_evidence": {"type": "object", "enabled": True},
+                "deadline": {"type": "object", "enabled": True},
+                "case_task_ids": {"type": "keyword"},
+                "records_request_text": {"type": "text"},
+                "review_summary": {"type": "text"},
+                "next_actions": {"type": "text"},
+                "created_at": {"type": "date"},
+            }
+        }
+    },
+    "records_requests": {
+        "mappings": {
+            "properties": {
+                "request_id": {"type": "keyword"},
+                "case_id": {"type": "keyword"},
+                "mission_id": {"type": "keyword"},
+                "status": {"type": "keyword"},
+                "request_context": {"type": "text"},
+                "records_needed": {"type": "text"},
+                "placeholder_fields": {"type": "keyword"},
+                "records_request_text": {"type": "text"},
+                "human_review_note": {"type": "text"},
                 "created_at": {"type": "date"},
             }
         }
@@ -309,7 +377,7 @@ def main() -> int:
     parser.add_argument("--index", dest="indexes", action="append", choices=sorted(DATASETS), help="Dataset index to ingest. Repeatable. Defaults to all datasets.")
     parser.add_argument("--dry-run", action="store_true", help="Validate local JSONL files without writing to Elastic.")
     parser.add_argument("--recreate", action="store_true", help="Delete and recreate selected indexes before ingesting.")
-    parser.add_argument("--create-empty-indexes", action="store_true", help="Also create empty workflow indexes: evidence_gaps, appeal_packets, action_logs.")
+    parser.add_argument("--create-empty-indexes", action="store_true", help="Also create empty workflow indexes for action plans and generated artifacts.")
     parser.add_argument("--insecure-tls", action="store_true", help="Disable TLS certificate verification for local/dev clusters.")
     args = parser.parse_args()
     try:
