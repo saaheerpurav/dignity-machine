@@ -81,7 +81,7 @@ export function CaseFactsPanel({ caseId, tasks, facts, onSaved, onUpdateActionPl
       const json = await res.json().catch(() => null)
       if (!res.ok) throw new Error(json?.detail || 'Could not save facts')
       onSaved(json.facts ?? [])
-      onWorkspaceEvent(eventFor(caseId, 'fact_saved', 'Saved facts to Elastic', { fields: payloadFacts.map(fact => fact.field) }))
+      onWorkspaceEvent(eventFor(caseId, 'fact_saved', 'Saved case details', { fields: payloadFacts.map(fact => fact.field) }))
 
       await Promise.all(fields
         .filter(({ meta }) => payloadFacts.some(fact => fact.field === meta.field))
@@ -94,7 +94,7 @@ export function CaseFactsPanel({ caseId, tasks, facts, onSaved, onUpdateActionPl
         ))
 
       onWorkspaceEvent(eventFor(caseId, 'task_status_updated', 'Marked missing-info tasks done'))
-      setMessage('Saved to Elastic. Update the action plan to use these details.')
+      setMessage('Saved. Update the action plan to use these details.')
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Could not save facts')
     } finally {

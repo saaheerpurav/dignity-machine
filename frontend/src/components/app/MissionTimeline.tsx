@@ -5,10 +5,10 @@ import { clsx } from 'clsx'
 
 const STAGES = [
   { label: 'Read denial', short: '1', desc: 'Read the selected denial letter and basic details.' },
-  { label: 'Search records', short: '2', desc: 'Search selected case documents saved in Elastic.' },
-  { label: 'Check rules', short: '3', desc: 'Search Social Security rules saved in Elastic.' },
+  { label: 'Review records', short: '2', desc: 'Review selected case documents.' },
+  { label: 'Check rules', short: '3', desc: 'Compare the denial with Social Security rules.' },
   { label: 'Find proof', short: '4', desc: 'Compare the records with the rules to find missing proof.' },
-  { label: 'Get helper', short: '5', desc: 'Find the trusted helper contact saved in Elastic.' },
+  { label: 'Get helper', short: '5', desc: 'Prepare any helper details available for the case.' },
   { label: 'Write summary', short: '6', desc: 'Draft a review summary for a human to check.' },
 ]
 

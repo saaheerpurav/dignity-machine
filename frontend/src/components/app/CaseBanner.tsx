@@ -3,13 +3,6 @@ import { FileText, Search, ShieldCheck } from 'lucide-react'
 import type { CaseSummary } from '@/types/api'
 
 export function CaseBanner({ selectedCase }: { selectedCase: CaseSummary }) {
-  const initials = selectedCase.title
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0]?.toUpperCase())
-    .join('') || 'DC'
-
   return (
     <motion.section
       initial={{ opacity: 0, y: 16 }}
@@ -18,15 +11,6 @@ export function CaseBanner({ selectedCase }: { selectedCase: CaseSummary }) {
       className="relative bg-white border border-slate-200 rounded-2xl overflow-hidden"
     >
       <div className="relative px-6 sm:px-8 py-7 flex items-start gap-6">
-        <motion.div
-          initial={{ scale: 0.85, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.45, delay: 0.1, type: 'spring', stiffness: 220, damping: 18 }}
-          className="shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center"
-        >
-          <span className="text-2xl sm:text-3xl font-bold text-teal-700">{initials}</span>
-        </motion.div>
-
         <div className="flex-1 min-w-0">
           <motion.p
             initial={{ opacity: 0 }}
@@ -52,7 +36,7 @@ export function CaseBanner({ selectedCase }: { selectedCase: CaseSummary }) {
             transition={{ delay: 0.36 }}
             className="mt-3 max-w-2xl text-sm text-slate-500 leading-relaxed"
           >
-            The agent is reading this denial and any uploaded case text, then comparing it with Social Security rules saved in Elastic.
+            The agent is reading this denial and any uploaded case text, then comparing it with relevant Social Security rules.
           </motion.p>
 
           <motion.div

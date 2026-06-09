@@ -161,6 +161,21 @@ def stable_task_id(title: str, reason: str = "") -> str:
     return f"task_{seed[:48] or uuid.uuid4().hex[:12]}"
 
 
+def canonical_evidence_subject(value: Any) -> str:
+    text = re.sub(r"\([^)]*\)", " ", str(value or "").lower())
+    text = re.sub(r"\badl\b", "activities of daily living", text)
+    text = re.sub(r"[^a-z0-9]+", " ", text).strip()
+    text = re.sub(
+        r"^(gather|prepare|obtain|secure|collect|request|get|provide|submit|draft|write|document|compile)\s+",
+        "",
+        text,
+    )
+    text = re.sub(r"^(evidence|proof|records|documentation)\s+(for|of|about|regarding)\s+", "", text)
+    text = re.sub(r"\b(evidence|proof|documentation)\b", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
 def stable_fact_id(case_id: str, field: str) -> str:
     seed = re.sub(r"[^a-z0-9]+", "_", f"{case_id}_{field}".lower()).strip("_")
     return f"fact_{seed[:72] or uuid.uuid4().hex[:12]}"
@@ -537,18 +552,31 @@ def fact_value(facts: dict[str, dict[str, Any]], field: str) -> str:
     return str(value or "").strip()
 
 
+DATE_TEXT = r"([A-Z][a-z]+\s+\d{1,2},\s+\d{4}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4})"
+
+
 def find_notice_date(case_text: str) -> datetime | None:
-    for pattern in (
-        r"\bDate:\s*([A-Z][a-z]+ \d{1,2}, \d{4})",
-        r"\bNotice Date:\s*([A-Z][a-z]+ \d{1,2}, \d{4})",
-        r"\bdated\s+([A-Z][a-z]+ \d{1,2}, \d{4})",
-    ):
-        match = re.search(pattern, case_text)
+    for pattern in [
+        rf"\bNotice\s+Date\s*:?\s*{DATE_TEXT}",
+        rf"\bDate\s+of\s+Notice\s*:?\s*{DATE_TEXT}",
+        rf"\bDate\s*:?\s*{DATE_TEXT}",
+        rf"\bDated\s*:?\s*{DATE_TEXT}",
+    ]:
+        match = re.search(pattern, case_text, flags=re.IGNORECASE)
         if match:
             parsed = parse_loose_date(match.group(1))
             if parsed:
                 return parsed
     return None
+
+
+def resolved_notice_date(case_text: str, structured: dict[str, Any], facts: dict[str, dict[str, Any]]) -> datetime | None:
+    deadline = structured.get("deadline") if isinstance(structured.get("deadline"), dict) else {}
+    return (
+        parse_loose_date(fact_value(facts, "notice_date"))
+        or parse_loose_date(deadline.get("notice_date"))
+        or find_notice_date(case_text)
+    )
 
 
 def iso_date(value: datetime | None) -> str | None:
@@ -569,7 +597,9 @@ def normalize_deadline(structured: dict[str, Any], case_id: str, facts: dict[str
         raw_deadline = {}
 
     fact_notice_date = parse_loose_date(fact_value(facts, "notice_date"))
-    notice_date = fact_notice_date or parse_loose_date(raw_deadline.get("notice_date")) or find_notice_date(case_text)
+    agent_notice_date = parse_loose_date(raw_deadline.get("notice_date"))
+    parsed_notice_date = find_notice_date(case_text)
+    notice_date = resolved_notice_date(case_text, structured, facts)
     assumed_receipt_date = parse_loose_date(raw_deadline.get("assumed_receipt_date"))
     appeal_deadline = parse_loose_date(raw_deadline.get("appeal_deadline"))
     source = str(raw_deadline.get("source") or "").strip()
@@ -580,8 +610,10 @@ def normalize_deadline(structured: dict[str, Any], case_id: str, facts: dict[str
         appeal_deadline = assumed_receipt_date + timedelta(days=60)
     if fact_notice_date:
         source = "user_answer"
-    elif notice_date and not source:
+    elif parsed_notice_date and notice_date == parsed_notice_date:
         source = "denial_letter"
+    elif agent_notice_date and not source:
+        source = "agent_inference"
 
     structured["deadline"] = {
         "notice_date": iso_date(notice_date),
@@ -591,6 +623,21 @@ def normalize_deadline(structured: dict[str, Any], case_id: str, facts: dict[str
         "source": source or "agent_inference",
         "human_review_required": True,
     }
+    if notice_date and not fact_notice_date:
+        detected = {
+            "fact_id": stable_fact_id(case_id, "notice_date_detected"),
+            "case_id": case_id,
+            "field": "notice_date",
+            "label": "Notice date",
+            "value": iso_date(notice_date),
+            "source": "denial_letter" if parsed_notice_date and notice_date == parsed_notice_date else "agent_extraction",
+            "confidence": 0.8 if parsed_notice_date and notice_date == parsed_notice_date else 0.7,
+            "created_at": now_iso(),
+            "updated_at": now_iso(),
+        }
+        existing_facts = structured.get("case_facts") if isinstance(structured.get("case_facts"), list) else []
+        if not any(isinstance(fact, dict) and fact.get("field") == "notice_date" for fact in existing_facts):
+            structured["case_facts"] = [*existing_facts, detected]
     return structured
 
 
@@ -598,6 +645,21 @@ def normalize_case_tasks(structured: dict[str, Any], case_text: str = "", facts:
     tasks: list[dict[str, Any]] = []
     seen: set[str] = set()
     facts = facts or {}
+
+    deduped_gaps: list[dict[str, Any]] = []
+    seen_gap_keys: set[str] = set()
+    for gap in structured.get("missing_evidence", []) or []:
+        if not isinstance(gap, dict):
+            continue
+        label = gap.get("gap_type") or gap.get("item") or gap.get("description") or gap.get("reason") or ""
+        description = gap.get("description") or gap.get("reason") or ""
+        key = canonical_evidence_subject(label) or canonical_evidence_subject(description)
+        if key and key in seen_gap_keys:
+            continue
+        if key:
+            seen_gap_keys.add(key)
+        deduped_gaps.append(gap)
+    structured["missing_evidence"] = deduped_gaps
 
     def add_task(
         task_type: str,
@@ -618,7 +680,8 @@ def normalize_case_tasks(structured: dict[str, Any], case_text: str = "", facts:
         if status not in TASK_STATUSES:
             status = "suggested" if task_type == "missing_proof" else "needs_info"
         source = source if source in TASK_SOURCES else "agent_inference"
-        key = f"{task_type}:{title.lower()}"
+        subject = canonical_evidence_subject(title) if task_type == "missing_proof" else re.sub(r"\s+", " ", title.lower()).strip()
+        key = f"{task_type}:{subject}"
         if key in seen:
             return
         seen.add(key)
@@ -647,8 +710,8 @@ def normalize_case_tasks(structured: dict[str, Any], case_text: str = "", facts:
             derived_from_gap=True,
         )
 
-    deadline = structured.get("deadline") if isinstance(structured.get("deadline"), dict) else {}
-    if not deadline.get("notice_date"):
+    notice_date = resolved_notice_date(case_text, structured, facts)
+    if not notice_date:
         add_task(
             "missing_notice_date",
             "Find notice date",

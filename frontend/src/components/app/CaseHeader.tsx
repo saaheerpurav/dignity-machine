@@ -2,12 +2,11 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Zap } from 'lucide-react'
 
 interface CaseHeaderProps {
-  caseId: string
   title: string
   onBack: () => void
 }
 
-export function CaseHeader({ caseId, title, onBack }: CaseHeaderProps) {
+export function CaseHeader({ title, onBack }: CaseHeaderProps) {
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -35,13 +34,9 @@ export function CaseHeader({ caseId, title, onBack }: CaseHeaderProps) {
           {title}
         </span>
 
-        <span className="text-xs text-slate-300 font-mono hidden md:inline truncate max-w-[220px]">
-          {caseId}
-        </span>
-
         <div className="ml-auto flex items-center gap-1.5 text-teal-500 text-xs font-medium shrink-0">
           <Zap size={11} />
-          <span className="hidden sm:inline">Live search with Elastic + Gemini</span>
+          <span className="hidden sm:inline">Review in progress</span>
         </div>
       </div>
     </motion.header>

@@ -56,13 +56,13 @@ export function DocumentPreview({ selectedCase, onBack, onAnalyze }: DocumentPre
               <div>
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">What you are reading</p>
                 <p className="text-slate-700 leading-relaxed">
-                  A text-based denial PDF with extracted content saved into a selected case workspace.
+                  A text-based denial PDF ready for review in this case workspace.
                 </p>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Elastic workspace</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Case workspace</p>
                 <p className="text-slate-700 leading-relaxed">
-                  {selectedCase.document_count} document{selectedCase.document_count === 1 ? '' : 's'} indexed for this case.
+                  {selectedCase.document_count} document{selectedCase.document_count === 1 ? '' : 's'} available for this case.
                 </p>
               </div>
             </div>
@@ -109,7 +109,7 @@ export function DocumentPreview({ selectedCase, onBack, onAnalyze }: DocumentPre
                 </div>
                 <h2 className="text-lg font-bold text-slate-900">PDF preview unavailable</h2>
                 <p className="text-sm text-slate-500 leading-relaxed">
-                  The extracted text is still saved in Elastic. Re-upload the denial PDF if you need to preview the original file.
+                  The extracted text is still available for review. Re-upload the denial PDF if you need to preview the original file.
                 </p>
               </div>
             </div>

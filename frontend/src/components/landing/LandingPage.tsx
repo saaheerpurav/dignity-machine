@@ -10,7 +10,7 @@ interface LandingPageProps {
 
 const steps = [
   'Read one text-based denial PDF',
-  'Save extracted text in Elastic',
+  'Create a private case workspace',
   'Analyze only the selected case',
   'Compare with Social Security rules',
 ]
@@ -21,9 +21,7 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
       <header className="border-b border-slate-100 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <span className="text-teal-700 font-bold text-sm tracking-widest uppercase">Dignity Machine</span>
-          <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full">
-            Google Cloud + Elastic
-          </span>
+          <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full">Appeal prep workspace</span>
         </div>
       </header>
 
@@ -44,7 +42,7 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
               Analyze a denial PDF
             </h1>
             <p className="text-base sm:text-lg text-slate-500 leading-relaxed font-light max-w-xl mx-auto">
-              Select the example denial or upload one text-readable PDF. The agent only searches the selected case workspace.
+              Select the example denial or upload one text-readable PDF. The review stays focused on that selected case.
             </p>
           </motion.div>
 
@@ -73,7 +71,7 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
             </button>
           </motion.div>
 
-          {loading && <p className="text-sm text-teal-600 font-medium">Reading PDF and saving text in Elastic</p>}
+          {loading && <p className="text-sm text-teal-600 font-medium">Reading PDF and preparing case workspace</p>}
           {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
 
           <motion.div

@@ -35,11 +35,6 @@ export function MissingEvidence({ items, loading }: MissingEvidenceProps) {
         {items.map((item, i) => {
           const title = item.item || item.gap_type || `Evidence gap ${i + 1}`
           const description = item.reason || item.description || item.why_it_matters || 'The agent flagged this as missing or incomplete evidence.'
-          const support = [
-            ...(item.supporting_case_doc_ids ?? []),
-            ...(item.supporting_policy_ids ?? []),
-          ]
-
           return (
             <motion.div
               key={i}
@@ -56,15 +51,6 @@ export function MissingEvidence({ items, loading }: MissingEvidenceProps) {
                 <p className="text-xs text-slate-500 leading-relaxed">{description}</p>
                 {item.why_it_matters && item.why_it_matters !== description && (
                   <p className="text-xs text-amber-600 leading-relaxed">{item.why_it_matters}</p>
-                )}
-                {support.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {support.map(id => (
-                      <span key={id} className="text-[10px] font-mono text-slate-400 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5">
-                        {id}
-                      </span>
-                    ))}
-                  </div>
                 )}
               </div>
             </motion.div>

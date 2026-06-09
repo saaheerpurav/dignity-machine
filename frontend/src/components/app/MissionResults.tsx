@@ -58,7 +58,7 @@ function openEmailDraft(caseId: string, facts: CaseFact[], draft: string, humanR
   const warning = placeholders?.length ? `\n\nPlaceholder warning: ${placeholders.join(', ')}` : ''
   const body = `${draft}${humanReviewNote ? `\n\nHuman review note: ${humanReviewNote}` : ''}${warning}`
   const mailto = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent('Medical records request for disability appeal')}&body=${encodeURIComponent(body)}`
-  window.location.href = mailto
+  window.open(mailto, '_blank', 'noopener,noreferrer')
   onWorkspaceEvent(workspaceEvent(caseId, 'mailto_opened', 'Opened prefilled email draft', { has_recipient: !!recipient }))
   fetch(`/api/cases/${encodeURIComponent(caseId)}/actions/log`, {
     method: 'POST',
@@ -182,7 +182,7 @@ export function RecordsRequestResult({ caseId, structured, loading, facts, onWor
             <div className="flex items-center gap-2">
               <button
                 onClick={() => openEmailDraft(caseId, facts, draft, structured.human_review_note, structured.placeholder_fields, onWorkspaceEvent)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-200 hover:text-teal-700"
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-200 hover:text-teal-700 cursor-pointer"
               >
                 Open email draft
               </button>
@@ -220,22 +220,21 @@ export function ReviewSummaryResult({ caseId, structured, loading, saved, facts,
         loading={false}
         onWorkspaceEvent={onWorkspaceEvent}
       />
-      {structured.records_request_draft && (
-        <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Records request action</p>
-            <p className="text-xs text-slate-400 mt-1">Opens a local email draft. Dignity Machine does not send it.</p>
-          </div>
-          <button
-            onClick={() => openEmailDraft(caseId, facts, structured.records_request_draft ?? '', structured.human_review_note, structured.placeholder_fields, onWorkspaceEvent)}
-            className="rounded-xl bg-teal-600 px-3 py-2 text-xs font-semibold text-white hover:bg-teal-700"
-          >
-            Open email draft
-          </button>
-        </div>
-      )}
       <EvidenceCards medical={[]} policy={structured.policy_citations ?? []} loading={false} />
-      <ReviewSummaryPreview structured={structured} loading={false} />
+      <ReviewSummaryPreview
+        structured={structured}
+        loading={false}
+        recordsRequestAction={
+          structured.records_request_draft ? (
+            <button
+              onClick={() => openEmailDraft(caseId, facts, structured.records_request_draft ?? '', structured.human_review_note, structured.placeholder_fields, onWorkspaceEvent)}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-200 hover:text-teal-700 cursor-pointer"
+            >
+              Open email draft
+            </button>
+          ) : null
+        }
+      />
     </div>
   )
 }

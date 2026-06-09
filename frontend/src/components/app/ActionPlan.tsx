@@ -214,7 +214,7 @@ export function ActionPlan({ caseId, deadline, tasks = [], hasRecordsDraft, hasR
         {saved && (
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1">
             <Save size={12} />
-            Saved to Elastic
+            Saved
           </span>
         )}
       </div>
@@ -237,7 +237,7 @@ export function ActionPlan({ caseId, deadline, tasks = [], hasRecordsDraft, hasR
                 </p>
                 <button
                   onClick={openCalendar}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-amber-100 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-50"
+                  className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-100 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-50"
                 >
                   <ExternalLink size={12} />
                   Add to Google Calendar

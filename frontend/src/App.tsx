@@ -82,7 +82,7 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
   }
 
   const handleReset = async () => {
-    if (!confirm('Delete saved action plan for this case from Elastic?')) return
+    if (!confirm('Delete the saved action plan for this case?')) return
     const res = await fetch(`/api/cases/${encodeURIComponent(selectedCase.case_id)}/writeback/reset`, { method: 'POST' })
     if (res.ok) {
       reset()
@@ -96,7 +96,7 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <CaseHeader caseId={selectedCase.case_id} title={selectedCase.title} onBack={onBack} />
+      <CaseHeader title={selectedCase.title} onBack={onBack} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         <CaseBanner selectedCase={selectedCase} />
@@ -132,7 +132,7 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
         <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-100">
           <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
             <input type="checkbox" checked={writeback} onChange={e => setWriteback(e.target.checked)} className="accent-teal-600" />
-            Save action plan to Elastic
+            Save action plan
           </label>
           <button onClick={handleReset} className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-red-400 transition-colors cursor-pointer">
             <RotateCcw size={11} />
@@ -140,7 +140,7 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
           </button>
         </div>
 
-        {data && <WritebackStatus enabled={data.writeback_enabled} writeCounts={data.write_counts} />}
+        {data && <WritebackStatus enabled={saved} />}
         {structured && !loading && <StatsBar mission={resultMission} structured={structured} />}
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -158,14 +158,14 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
             />
           </div>
           <div className="lg:col-span-1">
-            <TechTrace structured={structured} events={[...events, ...workspaceEvents]} loading={loading} missionId={data?.mission_id ?? null} />
+            <TechTrace structured={structured} events={[...events, ...workspaceEvents]} loading={loading} />
           </div>
         </div>
 
         {!loading && !data && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-24">
             <p className="text-sm font-medium text-slate-400">Choose what you want the agent to do</p>
-            <p className="text-xs mt-1.5 text-slate-300">Each run searches selected case documents and Social Security rules in Elastic</p>
+            <p className="text-xs mt-1.5 text-slate-300">Each run reviews the selected denial and relevant Social Security rules</p>
           </motion.div>
         )}
       </div>

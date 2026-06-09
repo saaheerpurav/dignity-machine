@@ -10,6 +10,7 @@ import type { StructuredResult } from '@/types/api'
 interface ReviewSummaryPreviewProps {
   structured: StructuredResult | null
   loading: boolean
+  recordsRequestAction?: React.ReactNode
 }
 
 function Section({
@@ -147,6 +148,109 @@ function InteractiveChecklist({ actions }: { actions: string[] }) {
   )
 }
 
+function normalizeMarkdownText(value: string) {
+  return value
+    .replace(/\r\n/g, '\n')
+    .replace(/\b(DI|POMS|SSR|HALLEX)\s*\n+\s*/gi, '$1 ')
+    .replace(/\(\s*([A-Z]{2,6})\s+(\d{4,6}\.\d{3})/g, '($1 $2')
+    .replace(/,\s*\n+\s*([A-Z]{2,6}\s+\d{4,6}\.\d{3})/g, ', $1')
+    .replace(/([^\n])\s+(\d{1,2}\.\s+(?=\*\*|[A-Z]))/g, '$1\n$2')
+    .replace(/(\d{1,2}\.)\s+(?=\d{1,2}\.)/g, '$1\n')
+    .replace(/\s+(?=(?:#{1,4}\s+)?\*\*[A-Z][^*\n]{2,90}:\*\*)/g, '\n')
+    .replace(/\s+(?=\d+\.\s+\*\*)/g, '\n')
+    .trim()
+}
+
+function InlineMarkdown({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={index} className="font-semibold text-slate-800">{part.slice(2, -2)}</strong>
+        }
+        return <span key={index}>{part}</span>
+      })}
+    </>
+  )
+}
+
+function MarkdownText({ value }: { value: string }) {
+  const lines = normalizeMarkdownText(value).split('\n')
+  const blocks: React.ReactNode[] = []
+  let listItems: { ordered: boolean; text: string }[] = []
+  let pendingOrderedItem = false
+
+  const flushList = () => {
+    if (listItems.length === 0) return
+    const ordered = listItems[0].ordered
+    const ListTag = ordered ? 'ol' : 'ul'
+    blocks.push(
+      <ListTag key={`list-${blocks.length}`} className={clsx('space-y-1.5 pl-5 text-sm text-slate-700 leading-relaxed', ordered ? 'list-decimal' : 'list-disc')}>
+        {listItems.map((item, index) => (
+          <li key={index}><InlineMarkdown text={item.text} /></li>
+        ))}
+      </ListTag>
+    )
+    listItems = []
+  }
+
+  lines.forEach((rawLine, index) => {
+    const line = rawLine.trim()
+    if (!line) {
+      if (pendingOrderedItem) return
+      flushList()
+      return
+    }
+
+    if (/^\d+\.\s*$/.test(line)) {
+      pendingOrderedItem = true
+      return
+    }
+
+    if (pendingOrderedItem) {
+      listItems.push({ ordered: true, text: line })
+      pendingOrderedItem = false
+      return
+    }
+
+    const heading = line.match(/^#{1,4}\s+(.+)$/) || line.match(/^\*\*([^*]{2,90}:)\*\*$/)
+    if (heading) {
+      flushList()
+      blocks.push(
+        <p key={`heading-${index}`} className="pt-2 text-xs font-bold uppercase tracking-widest text-slate-500">
+          <InlineMarkdown text={heading[1]} />
+        </p>
+      )
+      return
+    }
+
+    const numbered = line.match(/^\d+\.\s+(.+)$/)
+    if (numbered) {
+      const itemText = numbered[1].trim()
+      if (itemText) listItems.push({ ordered: true, text: itemText })
+      else pendingOrderedItem = true
+      return
+    }
+
+    const bullet = line.match(/^[-*]\s+(.+)$/)
+    if (bullet) {
+      listItems.push({ ordered: false, text: bullet[1] })
+      return
+    }
+
+    flushList()
+    blocks.push(
+      <p key={`p-${index}`} className="text-sm text-slate-700 leading-relaxed">
+        <InlineMarkdown text={line} />
+      </p>
+    )
+  })
+  flushList()
+
+  return <div className="space-y-3">{blocks}</div>
+}
+
 function buildFullReview(structured: StructuredResult) {
   const lines: string[] = ['Dignity Machine review summary', '']
   if (structured.denial_summary) {
@@ -192,7 +296,7 @@ function buildFullReview(structured: StructuredResult) {
   return lines.join('\n')
 }
 
-export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPreviewProps) {
+export function ReviewSummaryPreview({ structured, loading, recordsRequestAction }: ReviewSummaryPreviewProps) {
   if (loading) {
     return (
       <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
@@ -241,7 +345,7 @@ export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPrevi
         <div className="p-5 space-y-3">
           {denial_summary && (
             <Section icon={BookOpen} label="Denial summary" accent="bg-rose-50 text-rose-400" defaultOpen>
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{denial_summary}</p>
+              <MarkdownText value={denial_summary} />
             </Section>
           )}
 
@@ -250,7 +354,12 @@ export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPrevi
               icon={FileText}
               label="Doctor records request"
               accent="bg-sky-50 text-sky-400"
-              headerExtra={<CopyButton text={records_request_draft} />}
+              headerExtra={
+                <div className="flex items-center gap-2">
+                  {recordsRequestAction}
+                  <CopyButton text={records_request_draft} />
+                </div>
+              }
             >
               <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">{records_request_draft}</pre>
             </Section>
@@ -269,7 +378,7 @@ export function ReviewSummaryPreview({ structured, loading }: ReviewSummaryPrevi
 
           {reviewSummary && (
             <Section icon={BookOpen} label="Review summary" accent="bg-violet-50 text-violet-400">
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{reviewSummary}</p>
+              <MarkdownText value={reviewSummary} />
             </Section>
           )}
 

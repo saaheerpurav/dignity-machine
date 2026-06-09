@@ -58,12 +58,12 @@ export function UploadCase({ loading, error, onBack, onUpload }: UploadCaseProps
               <FileUp size={28} className="text-teal-700" />
               <div>
                 <p className="text-sm font-semibold text-slate-800">{file ? file.name : 'Choose one PDF'}</p>
-                <p className="text-xs text-slate-400 mt-1">The extracted text will be saved in Elastic before analysis.</p>
+                <p className="text-xs text-slate-400 mt-1">The readable text will be prepared for this case before analysis.</p>
               </div>
             </div>
           </label>
 
-          {loading && <p className="text-sm text-teal-600 font-medium">Reading PDF and saving text in Elastic</p>}
+          {loading && <p className="text-sm text-teal-600 font-medium">Reading PDF and preparing case workspace</p>}
           {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
 
           <button

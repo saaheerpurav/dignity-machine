@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useTrail, animated } from '@react-spring/web'
 import { motion, AnimatePresence } from 'framer-motion'
-import * as Tooltip from '@radix-ui/react-tooltip'
 import { ShimmerCard } from '@/components/ui/Shimmer'
 import { ExternalLink, ChevronDown } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -13,27 +12,6 @@ interface EvidenceCardsProps {
   medical: MedicalEvidence[]
   policy: PolicyCitation[]
   loading: boolean
-}
-
-function DocId({ docId, index }: { docId: string; index?: string }) {
-  return (
-    <Tooltip.Provider delayDuration={200}>
-      <Tooltip.Root>
-        <Tooltip.Trigger asChild>
-          <span className="text-[10px] font-mono text-slate-600 hover:text-slate-800 cursor-default transition-colors truncate max-w-[180px]">
-            {docId}
-          </span>
-        </Tooltip.Trigger>
-        <Tooltip.Portal>
-          <Tooltip.Content className="bg-slate-900 text-white text-xs px-3 py-2 rounded-lg z-50 max-w-xs" sideOffset={4}>
-            <p className="font-mono">{docId}</p>
-            {index && <p className="text-slate-400 mt-0.5">index: {index}</p>}
-            <Tooltip.Arrow className="fill-slate-900" />
-          </Tooltip.Content>
-        </Tooltip.Portal>
-      </Tooltip.Root>
-    </Tooltip.Provider>
-  )
 }
 
 function ExpandableCard({
@@ -94,7 +72,6 @@ function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1">Case evidence</p>
-            <DocId docId={ev.doc_id} index={ev.index} />
             {ev.title && <p className="text-xs font-semibold text-slate-600 leading-tight mt-1">{ev.title}</p>}
           </div>
         </div>
@@ -108,9 +85,8 @@ function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
               </div>
             ) : (
               <div className="text-[11px] text-slate-600 leading-relaxed space-y-1">
-                <p><span className="font-semibold text-slate-700">Source:</span> Selected case documents in Elastic</p>
+                <p><span className="font-semibold text-slate-700">Source:</span> Selected case documents</p>
                 {ev.title && <p><span className="font-semibold text-slate-700">Document:</span> {ev.title}</p>}
-                <p><span className="font-semibold text-slate-700">ID:</span> <span className="font-mono">{ev.doc_id}</span></p>
               </div>
             )
           }
@@ -145,8 +121,7 @@ function PolicyCard({ citation, style }: { citation: PolicyCitation; style: obje
           </a>
         )}
         <div className="text-[11px] text-slate-400">
-          <span className="font-semibold">Source:</span> Social Security rules in Elastic
-          {citation.doc_id && <span className="font-mono"> - {citation.doc_id}</span>}
+          <span className="font-semibold">Source:</span> Social Security rules
         </div>
       </div>
     </animated.div>
