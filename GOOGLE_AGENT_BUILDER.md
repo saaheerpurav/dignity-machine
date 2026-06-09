@@ -28,8 +28,9 @@ The live FastAPI app does not give the agent generic case-document MCP access fo
 
 - `list_case_documents()`
 - `search_case_documents(query)`
+- `list_case_facts()`
 
-Those functions close over the selected `case_id` and always apply an Elastic `term` filter.
+Those functions close over the selected `case_id` and always apply an Elastic `term` filter. `list_case_facts()` lets Gemini use saved user-provided facts such as notice date and provider name without asking again.
 
 ## Upload Or Update Tools
 
@@ -53,10 +54,12 @@ The ADK agent factory lives in:
 dignity_agent/agent.py
 ```
 
-`build_agents(...)` accepts scoped case-document functions and returns:
+`build_agents(...)` accepts scoped case-document/fact functions and returns:
 
 - the full orchestrator agent
 - the denial-analysis specialist
+
+The app still uses Elastic Agent Builder MCP for global SSA policy/forms/memory/contact retrieval. Selected case evidence and selected case facts are intentionally backend scoped.
 
 Full model execution requires Google model credentials. Use Vertex AI with Application Default Credentials or configure a Gemini API key.
 
