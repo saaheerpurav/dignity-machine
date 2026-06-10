@@ -77,14 +77,14 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
   useEffect(() => {
     if (reduceMotion || !trustListRef.current) return
     const items = trustListRef.current.querySelectorAll('li')
-    gsap.from(items, {
-      opacity: 0,
-      y: 14,
-      duration: 0.6,
-      ease: 'power3.out',
-      stagger: 0.12,
-      delay: 0.5,
-    })
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        items,
+        { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', stagger: 0.12, delay: 0.5 },
+      )
+    }, trustListRef)
+    return () => ctx.revert()
   }, [reduceMotion])
 
   const breath = reduceMotion
