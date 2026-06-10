@@ -5,13 +5,10 @@ import {
   ArrowRight,
   CalendarClock,
   CheckCircle2,
-  FileText,
   FileUp,
-  IdCard,
   Lock,
   Mail,
   PlayCircle,
-  Receipt,
   ScrollText,
   ShieldCheck,
   Stethoscope,
@@ -42,19 +39,11 @@ const steps = [
   },
 ]
 
-const documentsYouNeed = [
-  { icon: FileText, label: 'The denial letter', body: 'Most important. A PDF you can highlight text in.' },
-  { icon: Receipt, label: 'Recent medical bills', body: 'Helpful for showing care received and costs.' },
-  { icon: ShieldCheck, label: 'Insurance policy', body: 'So we can match denial reasons to coverage.' },
-  { icon: Stethoscope, label: 'Hospital records', body: 'Discharge summaries, visit notes, treatment history.' },
-  { icon: IdCard, label: 'A photo ID', body: 'Only if you choose to share it with an advocate later.' },
-]
-
 const trust = [
   {
     icon: Lock,
     title: 'Private by design',
-    body: 'Your case stays in its own scoped workspace. Searches are filtered to your case only — never anyone else’s.',
+    body: 'Your case stays in its own scoped workspace. Searches are filtered to your case only, never anyone else’s.',
   },
   {
     icon: ScrollText,
@@ -130,10 +119,6 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
               Dignity Machine
             </span>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-[13px] text-[#6b6258]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#3f5d4a]" />
-            Private case workspace
-          </div>
         </div>
       </header>
 
@@ -170,7 +155,7 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
             >
               A calm, private workspace for understanding a Social Security disability denial. We
               read the letter with you, point to the rule it leans on, and help you draft what
-              comes next — at your pace.
+              comes next, at your pace.
             </motion.p>
 
             <motion.div
@@ -297,54 +282,6 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
         </div>
       </section>
 
-      {/* documents you need */}
-      <section className="px-6 py-20">
-        <div className="max-w-5xl mx-auto grid md:grid-cols-[1fr,1.4fr] gap-12">
-          <motion.div {...fadeUp()}>
-            <p className="text-[13px] font-semibold uppercase tracking-wider text-[#3f5d4a]">
-              What to gather
-            </p>
-            <h2
-              style={{ fontFamily: '"Fraunces", Georgia, serif' }}
-              className="mt-2 text-[34px] sm:text-[40px] font-medium tracking-tight leading-[1.1] text-[#1f1b16]"
-            >
-              Helpful to have nearby
-            </h2>
-            <p className="mt-4 text-[16px] text-[#5a5145] leading-[1.65]">
-              You only need the denial letter to start. The rest you can add later, as you go.
-            </p>
-          </motion.div>
-
-          <div className="space-y-3">
-            {documentsYouNeed.map((d, i) => {
-              const Icon = d.icon
-              return (
-                <motion.div
-                  key={d.label}
-                  {...fadeUp(i * 0.05)}
-                  className="flex items-start gap-4 bg-white border border-[#e5dcc9] rounded-2xl p-5"
-                >
-                  <div className="h-10 w-10 rounded-xl bg-[#f4ead3] border border-[#e6d8b5] flex items-center justify-center shrink-0">
-                    <Icon size={17} className="text-[#7a5e2a]" strokeWidth={2} />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-baseline justify-between gap-3 flex-wrap">
-                      <p className="text-[16px] font-semibold text-[#1f1b16]">{d.label}</p>
-                      {i === 0 && (
-                        <span className="text-[12px] font-semibold text-[#3f5d4a] bg-[#e8efe6] px-2 py-0.5 rounded-full">
-                          Required to start
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-[15px] text-[#5a5145] leading-[1.55]">{d.body}</p>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
       {/* final actions */}
       <section className="px-6 py-20 bg-[#efe7d5]/60 border-y border-[#e5dcc9]">
         <div className="max-w-5xl mx-auto">
@@ -385,7 +322,7 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
                 <p className="text-[16px] font-semibold text-[#1f1b16]">A request for records</p>
               </div>
               <p className="mt-4 text-[15px] text-[#5a5145] leading-[1.6]">
-                A polite, specific email draft opens in your mail client — already addressed, with
+                A polite, specific email draft opens in your mail client, already addressed, with
                 the records named. You send it.
               </p>
             </motion.div>
@@ -411,7 +348,7 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
           <p className="mt-4 text-[16px] text-[#4f463b] leading-[1.7]">
             Dignity Machine helps you understand and organize a denial letter and the next steps.
             We are not a law firm. We do not provide legal or medical advice. For decisions that
-            need a professional, we’ll suggest you talk to an attorney, advocate, or clinician —
+            need a professional, we’ll suggest you talk to an attorney, advocate, or clinician,
             and we’ll help you prepare what to bring.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">

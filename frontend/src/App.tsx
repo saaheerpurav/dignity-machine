@@ -55,7 +55,7 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
   const { config, loading: configLoading } = useConfig()
   const { data, loading, error, events, statusMessages, run, reset } = useAnalyze()
   const [activeMission, setActiveMission] = useState<string | null>(null)
-  const [writeback, setWriteback] = useState(false)
+  const writeback = false
   const [facts, setFacts] = useState<CaseFact[]>([])
   const [workspaceEvents, setWorkspaceEvents] = useState<AgentEvent[]>([])
   const resetDialog = useOverlayState()
@@ -147,11 +147,7 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-100">
-          <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
-            <input type="checkbox" checked={writeback} onChange={e => setWriteback(e.target.checked)} className="accent-teal-600" />
-            Save action plan
-          </label>
+        <div className="flex items-center justify-end gap-3 pb-2 border-b border-slate-100">
           <button onClick={resetDialog.open} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#9c3a2a] transition-colors cursor-pointer">
             <RotateCcw size={11} />
             Reset action plan
