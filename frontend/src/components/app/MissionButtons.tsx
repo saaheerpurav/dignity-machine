@@ -48,7 +48,7 @@ export function MissionButtons({ missions, activeMission, loading, onSelect }: M
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: i * 0.07, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-            whileHover={loading ? {} : { y: -3, boxShadow: '0 8px 24px rgba(94,184,173,0.18)' }}
+            whileHover={loading ? {} : { y: -3, boxShadow: '0 8px 24px rgba(63,93,74,0.18)' }}
             whileTap={loading ? {} : { scale: 0.97 }}
             onClick={() => !loading && onSelect(mission.id)}
             disabled={loading}

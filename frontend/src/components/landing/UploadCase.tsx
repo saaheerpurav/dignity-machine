@@ -63,8 +63,18 @@ export function UploadCase({ loading, error, onBack, onUpload }: UploadCaseProps
             </div>
           </label>
 
-          {loading && <p className="text-sm text-teal-600 font-medium">Reading PDF and preparing case workspace</p>}
-          {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
+          {loading && (
+            <p className="text-sm text-teal-700 font-medium flex items-center gap-2">
+              <span className="loading loading-dots loading-sm text-teal-700" />
+              Reading PDF and preparing your case workspace
+            </p>
+          )}
+          {error && (
+            <div role="alert" className="alert bg-[#fbeae4] border border-[#e8c4ba] text-[#9c3a2a] rounded-xl px-4 py-3 flex items-start gap-2.5">
+              <span className="text-sm font-semibold">We couldn't read this PDF.</span>
+              <span className="text-sm text-[#7d2e21] break-words">{error}</span>
+            </div>
+          )}
 
           <button
             onClick={() => file && onUpload(file)}

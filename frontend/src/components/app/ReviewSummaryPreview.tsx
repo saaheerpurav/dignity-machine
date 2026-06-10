@@ -325,7 +325,7 @@ export function ReviewSummaryPreview({ structured, loading, recordsRequestAction
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.3 }}
           className="absolute -inset-px rounded-2xl pointer-events-none"
-          style={{ boxShadow: '0 0 0 1px rgba(94,184,173,0.18)' }}
+          style={{ boxShadow: '0 0 0 1px rgba(63,93,74,0.18)' }}
         />
 
         {/* header */}
@@ -344,7 +344,7 @@ export function ReviewSummaryPreview({ structured, loading, recordsRequestAction
 
         <div className="p-5 space-y-3">
           {denial_summary && (
-            <Section icon={BookOpen} label="Denial summary" accent="bg-rose-50 text-rose-400" defaultOpen>
+            <Section icon={BookOpen} label="Denial summary" accent="bg-[#f5e8de] text-[#a85a3a]" defaultOpen>
               <MarkdownText value={denial_summary} />
             </Section>
           )}
@@ -377,7 +377,7 @@ export function ReviewSummaryPreview({ structured, loading, recordsRequestAction
           )}
 
           {reviewSummary && (
-            <Section icon={BookOpen} label="Review summary" accent="bg-violet-50 text-violet-400">
+            <Section icon={BookOpen} label="Review summary" accent="bg-teal-50 text-teal-700">
               <MarkdownText value={reviewSummary} />
             </Section>
           )}

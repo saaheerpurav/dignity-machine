@@ -3,6 +3,51 @@
   themes: light --default;
 }
 
+/* Cream + forest palette — overrides Tailwind's slate / teal / emerald / sky
+   so every existing component reads as warm and calm. */
+@theme {
+  /* surfaces + warm neutrals (slate scale) */
+  --color-slate-50:  #fbf8f1;
+  --color-slate-100: #f4ead3;
+  --color-slate-200: #e5dcc9;
+  --color-slate-300: #c9bda4;
+  --color-slate-400: #8b8276;
+  --color-slate-500: #6b6258;
+  --color-slate-600: #5a5145;
+  --color-slate-700: #3d3528;
+  --color-slate-800: #2a241d;
+  --color-slate-900: #1f1b16;
+
+  /* primary forest green (teal scale) */
+  --color-teal-50:  #eef3eb;
+  --color-teal-100: #dce8d8;
+  --color-teal-200: #c4d6bf;
+  --color-teal-300: #a3bea1;
+  --color-teal-400: #6f9079;
+  --color-teal-500: #4f7861;
+  --color-teal-600: #3f5d4a;
+  --color-teal-700: #34503e;
+  --color-teal-800: #2a4232;
+  --color-teal-900: #1f3127;
+
+  /* secondary forest (emerald scale, collapses into the same family) */
+  --color-emerald-50:  #eef3eb;
+  --color-emerald-100: #dce8d8;
+  --color-emerald-200: #c4d6bf;
+  --color-emerald-300: #a3bea1;
+  --color-emerald-400: #6f9079;
+  --color-emerald-500: #4f7861;
+  --color-emerald-600: #3f5d4a;
+  --color-emerald-700: #34503e;
+
+  /* informational accent (sky scale) — warm muted blue-grey */
+  --color-sky-50:  #f1ede4;
+  --color-sky-100: #e3d9c2;
+  --color-sky-400: #6f8896;
+  --color-sky-500: #5a7384;
+  --color-sky-600: #4a6271;
+}
+
 :root {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -10,8 +55,8 @@
 
 body {
   margin: 0;
-  background-color: #f8fafc;
-  color: #1e293b;
+  background-color: #f6f1e8;
+  color: #1f1b16;
 }
 
 #root {
@@ -24,7 +69,7 @@ body {
 }
 
 .shimmer {
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, #f4ead3 25%, #e5dcc9 50%, #f4ead3 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }

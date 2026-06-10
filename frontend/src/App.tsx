@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import {
+  ModalRoot,
+  ModalBackdrop,
+  ModalContainer,
+  ModalDialog,
+  ModalHeader,
+  ModalHeading,
+  ModalBody,
+  ModalFooter,
+  useOverlayState,
+} from '@heroui/react'
 import { RotateCcw } from 'lucide-react'
 import { useConfig } from '@/hooks/useConfig'
 import { useAnalyze } from '@/hooks/useAnalyze'
@@ -47,6 +58,8 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
   const [writeback, setWriteback] = useState(false)
   const [facts, setFacts] = useState<CaseFact[]>([])
   const [workspaceEvents, setWorkspaceEvents] = useState<AgentEvent[]>([])
+  const resetDialog = useOverlayState()
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -81,12 +94,17 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
     setWorkspaceEvents(prev => [...prev, event])
   }
 
-  const handleReset = async () => {
-    if (!confirm('Delete the saved action plan for this case?')) return
-    const res = await fetch(`/api/cases/${encodeURIComponent(selectedCase.case_id)}/writeback/reset`, { method: 'POST' })
-    if (res.ok) {
-      reset()
-      setActiveMission(null)
+  const confirmReset = async () => {
+    setResetting(true)
+    try {
+      const res = await fetch(`/api/cases/${encodeURIComponent(selectedCase.case_id)}/writeback/reset`, { method: 'POST' })
+      if (res.ok) {
+        reset()
+        setActiveMission(null)
+        resetDialog.close()
+      }
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -134,11 +152,45 @@ function AppDashboard({ selectedCase, onBack }: { selectedCase: CaseSummary; onB
             <input type="checkbox" checked={writeback} onChange={e => setWriteback(e.target.checked)} className="accent-teal-600" />
             Save action plan
           </label>
-          <button onClick={handleReset} className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-red-400 transition-colors cursor-pointer">
+          <button onClick={resetDialog.open} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#9c3a2a] transition-colors cursor-pointer">
             <RotateCcw size={11} />
             Reset action plan
           </button>
         </div>
+
+        <ModalRoot state={resetDialog}>
+          <ModalBackdrop variant="blur">
+            <ModalContainer placement="center">
+              <ModalDialog className="bg-[#fbf8f1] border border-[#e5dcc9] rounded-3xl p-6 max-w-md">
+                <ModalHeader>
+                  <ModalHeading className="text-[#1f1b16] text-lg font-semibold">
+                    Reset your action plan?
+                  </ModalHeading>
+                </ModalHeader>
+                <ModalBody className="text-sm text-[#5a5145] leading-relaxed mt-2">
+                  This clears the saved action plan, tasks, and any drafts the agent generated for this case.
+                  Your uploaded denial and case workspace stay intact.
+                </ModalBody>
+                <ModalFooter className="mt-5 flex gap-2 justify-end">
+                  <button
+                    onClick={resetDialog.close}
+                    disabled={resetting}
+                    className="px-4 py-2 rounded-full text-sm font-medium text-[#1f1b16] hover:bg-[#f4ead3] transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Keep it
+                  </button>
+                  <button
+                    onClick={confirmReset}
+                    disabled={resetting}
+                    className="px-4 py-2 rounded-full text-sm font-medium bg-[#9c3a2a] hover:bg-[#7d2e21] text-[#f6f1e8] transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                  >
+                    {resetting ? 'Resetting…' : 'Yes, reset'}
+                  </button>
+                </ModalFooter>
+              </ModalDialog>
+            </ModalContainer>
+          </ModalBackdrop>
+        </ModalRoot>
 
         {data && <WritebackStatus enabled={saved} />}
         {structured && !loading && <StatsBar mission={resultMission} structured={structured} />}
@@ -269,10 +321,10 @@ export default function App() {
 
   if (restoreLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-[#f6f1e8] flex items-center justify-center">
         <div className="space-y-3 text-center">
-          <div className="mx-auto w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 animate-pulse" />
-          <p className="text-sm font-medium text-slate-400">Restoring selected case</p>
+          <div className="mx-auto w-10 h-10 rounded-xl bg-[#eef3eb] border border-[#cddccd] animate-pulse" />
+          <p className="text-sm font-medium text-slate-500">Restoring your case</p>
         </div>
       </div>
     )

@@ -235,13 +235,15 @@ export function ActionPlan({ caseId, deadline, tasks = [], hasRecordsDraft, hasR
                 <p className="text-xs text-slate-400">
                   Notice: {deadline.notice_date ?? 'unknown'} / assumed receipt: {deadline.assumed_receipt_date ?? 'unknown'}
                 </p>
-                <button
-                  onClick={openCalendar}
-                  className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-100 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-50"
-                >
-                  <ExternalLink size={12} />
-                  Add to Google Calendar
-                </button>
+                <div className="tooltip tooltip-right" data-tip="Opens a prefilled Google Calendar event. Nothing is added until you confirm.">
+                  <button
+                    onClick={openCalendar}
+                    className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-100 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-50"
+                  >
+                    <ExternalLink size={12} />
+                    Add to Google Calendar
+                  </button>
+                </div>
               </div>
             ) : (
               <p className="text-sm text-slate-600">Find the notice date before relying on any appeal deadline.</p>
@@ -286,10 +288,10 @@ export function ActionPlan({ caseId, deadline, tasks = [], hasRecordsDraft, hasR
         {showArtifactCards && hasReviewSummary && !hasReviewSummaryTask && (
           <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <ClipboardList size={15} className="text-violet-500" />
+              <ClipboardList size={15} className="text-teal-700" />
               <p className="text-sm font-semibold text-slate-800">Review summary</p>
             </div>
-            <span className="text-[11px] font-semibold text-violet-600">Ready for review</span>
+            <span className="text-[11px] font-semibold text-teal-700">Ready for review</span>
           </div>
         )}
       </div>

@@ -74,8 +74,8 @@ export function DenialExplanationResult({ structured, loading }: Pick<MissionRes
       <Panel title="Denial explanation">
         {structured.denial_summary && <p className="text-sm text-slate-700 leading-relaxed">{structured.denial_summary}</p>}
         {structured.denial_reason && (
-          <div className="border border-rose-100 bg-rose-50 rounded-xl p-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-rose-400 mb-1">Reason stated</p>
+          <div className="border border-[#e8d3c1] bg-[#f5e8de] rounded-xl p-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#a85a3a] mb-1">Reason stated</p>
             <p className="text-sm text-slate-700 leading-relaxed">{structured.denial_reason}</p>
           </div>
         )}
@@ -180,12 +180,14 @@ export function RecordsRequestResult({ caseId, structured, loading, facts, onWor
               <p className="text-sm font-semibold text-slate-800">Request draft</p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => openEmailDraft(caseId, facts, draft, structured.human_review_note, structured.placeholder_fields, onWorkspaceEvent)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-200 hover:text-teal-700 cursor-pointer"
-              >
-                Open email draft
-              </button>
+              <div className="tooltip tooltip-bottom" data-tip="Opens a prefilled draft in your mail client. You review and send.">
+                <button
+                  onClick={() => openEmailDraft(caseId, facts, draft, structured.human_review_note, structured.placeholder_fields, onWorkspaceEvent)}
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-200 hover:text-teal-700 cursor-pointer"
+                >
+                  Open email draft
+                </button>
+              </div>
               <CopyButton text={draft} label="Copy request" />
             </div>
           </div>
@@ -226,12 +228,14 @@ export function ReviewSummaryResult({ caseId, structured, loading, saved, facts,
         loading={false}
         recordsRequestAction={
           structured.records_request_draft ? (
-            <button
-              onClick={() => openEmailDraft(caseId, facts, structured.records_request_draft ?? '', structured.human_review_note, structured.placeholder_fields, onWorkspaceEvent)}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-200 hover:text-teal-700 cursor-pointer"
-            >
-              Open email draft
-            </button>
+            <div className="tooltip tooltip-bottom" data-tip="Opens a prefilled draft in your mail client. You review and send.">
+              <button
+                onClick={() => openEmailDraft(caseId, facts, structured.records_request_draft ?? '', structured.human_review_note, structured.placeholder_fields, onWorkspaceEvent)}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-200 hover:text-teal-700 cursor-pointer"
+              >
+                Open email draft
+              </button>
+            </div>
           ) : null
         }
       />

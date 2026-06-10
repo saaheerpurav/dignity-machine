@@ -66,12 +66,12 @@ function MedicalCard({ ev, style }: { ev: MedicalEvidence; style: object }) {
   const preview = ev.excerpt || ev.finding || ev.title || 'Retrieved case document'
   const distinctDetails = ev.relevance && ev.relevance.trim() !== preview.trim() ? ev.relevance : ''
   return (
-    <animated.div style={style} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-blue-200 transition-colors">
-      <div className="h-1 w-full bg-blue-200" />
+    <animated.div style={style} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-[#c9bda4] transition-colors">
+      <div className="h-1 w-full bg-[#d9cfba]" />
       <div className="p-5 space-y-2.5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1">Case evidence</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#7a5e2a] mb-1">Case evidence</p>
             {ev.title && <p className="text-xs font-semibold text-slate-600 leading-tight mt-1">{ev.title}</p>}
           </div>
         </div>
