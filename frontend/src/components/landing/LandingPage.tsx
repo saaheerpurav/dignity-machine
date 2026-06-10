@@ -141,21 +141,12 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
       <section className="px-6 pt-20 pb-24">
         <div className="max-w-5xl mx-auto grid md:grid-cols-[1.3fr,1fr] gap-12 items-start">
           <div>
-            <motion.span
-              initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease }}
-              className="inline-block text-[13px] font-medium text-[#3f5d4a] bg-[#e8efe6] border border-[#cddccd] rounded-full px-3 py-1"
-            >
-              For people who just got a disability denial letter
-            </motion.span>
-
             <motion.h1
               initial={reduceMotion ? false : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease }}
               style={{ fontFamily: '"Fraunces", "Inter", Georgia, serif' }}
-              className="mt-6 text-[clamp(2.5rem,5.5vw,4.25rem)] font-medium leading-[1.05] tracking-[-0.015em] text-[#1f1b16]"
+              className="text-[clamp(2.5rem,5.5vw,4.25rem)] font-medium leading-[1.05] tracking-[-0.015em] text-[#1f1b16]"
             >
               You opened the letter.
               <br />
@@ -163,10 +154,19 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
             </motion.h1>
 
             <motion.p
+              initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1, ease }}
+              className="mt-6 text-[15px] font-medium text-[#3f5d4a]"
+            >
+              For people who just got a disability denial letter.
+            </motion.p>
+
+            <motion.p
               initial={reduceMotion ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.15, ease }}
-              className="mt-6 text-[17px] leading-[1.65] text-[#4f463b] max-w-xl"
+              transition={{ duration: 0.6, delay: 0.2, ease }}
+              className="mt-4 text-[17px] leading-[1.65] text-[#4f463b] max-w-xl"
             >
               A calm, private workspace for understanding a Social Security disability denial. We
               read the letter with you, point to the rule it leans on, and help you draft what
