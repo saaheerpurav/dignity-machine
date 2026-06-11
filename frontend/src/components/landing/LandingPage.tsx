@@ -401,10 +401,26 @@ export function LandingPage({ loading, error, onExample, onUpload }: LandingPage
         </div>
       </section>
 
-      <footer className="border-t border-[#e5dcc9] px-6 py-8 text-center">
-        <p className="text-[13px] text-[#6b6258]">
-          Dignity Machine · Built for the Google Agent AI Hackathon · Palak, Saaheer, Supreet
-        </p>
+      <footer className="border-t border-[#e5dcc9] px-6 py-10">
+        <div className="max-w-5xl mx-auto space-y-5">
+          <p className="text-[13px] text-[#6b6258] text-center">
+            Dignity Machine · Built for the Google Agent AI Hackathon
+          </p>
+          <div className="grid sm:grid-cols-3 gap-4 text-center sm:text-left">
+            <div>
+              <p className="text-[14px] font-semibold text-[#1f1b16]">Palak</p>
+              <p className="text-[13px] text-[#6b6258] mt-0.5">Frontend &amp; design</p>
+            </div>
+            <div>
+              <p className="text-[14px] font-semibold text-[#1f1b16]">Saaheer</p>
+              <p className="text-[13px] text-[#6b6258] mt-0.5">Agent &amp; backend</p>
+            </div>
+            <div>
+              <p className="text-[14px] font-semibold text-[#1f1b16]">Supreet</p>
+              <p className="text-[13px] text-[#6b6258] mt-0.5">Agent &amp; infra</p>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   )
