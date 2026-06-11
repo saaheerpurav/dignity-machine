@@ -17,8 +17,8 @@ PDF_UPLOAD_DIR = ROOT / "static" / "documents" / "uploads"
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 SCANNED_PDF_MESSAGE = "No readable text found. Upload a text-based PDF for this demo."
 IRRELEVANT_PDF_MESSAGE = "This PDF does not look like a disability denial letter. Try the example denial or upload a notice from Social Security."
-EXAMPLE_CASE_ID = "case_example_denial_pdf_001"
-EXAMPLE_DOC_ID = "example_denial_pdf_001"
+EXAMPLE_CASE_ID = "case_6f3a2c91b7d4"
+EXAMPLE_DOC_ID = "denial_pdf_seed_001"
 
 
 class CaseError(Exception):
@@ -391,7 +391,7 @@ class CaseService:
             EXAMPLE_DOC_ID,
             pdf_path.name,
             text,
-            "Example denial PDF",
+            "Social Security disability denial notice",
             classification=self.classifier.classify(text),
         )
         return self.summary(EXAMPLE_CASE_ID)

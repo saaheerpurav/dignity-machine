@@ -128,6 +128,21 @@ function PolicyCard({ citation, style }: { citation: PolicyCitation; style: obje
   )
 }
 
+function isPolicyCitation(citation: PolicyCitation) {
+  const docId = citation.doc_id?.toLowerCase() ?? ''
+  const chunkId = citation.chunk_id?.toLowerCase() ?? ''
+  const title = citation.title?.toLowerCase() ?? ''
+  const url = citation.url?.toLowerCase() ?? ''
+  return (
+    docId.startsWith('poms_') ||
+    chunkId.startsWith('poms_') ||
+    url.includes('secure.ssa.gov') ||
+    url.includes('policy.ssa.gov') ||
+    title.startsWith('ssa - poms') ||
+    title.includes('program operations manual system')
+  )
+}
+
 function FilterControl({ mode, onChange, counts }: {
   mode: FilterMode
   onChange: (m: FilterMode) => void
@@ -174,7 +189,7 @@ export function EvidenceCards({ medical, policy, loading }: EvidenceCardsProps) 
 
   const visible = useMemo(() => {
     const med = medical ?? []
-    const pol = policy ?? []
+    const pol = (policy ?? []).filter(isPolicyCitation)
     if (mode === 'medical') return { items: med.map(m => ({ kind: 'm' as const, data: m })), counts: { all: med.length + pol.length, medical: med.length, policy: pol.length } }
     if (mode === 'policy') return { items: pol.map(p => ({ kind: 'p' as const, data: p })), counts: { all: med.length + pol.length, medical: med.length, policy: pol.length } }
     return {

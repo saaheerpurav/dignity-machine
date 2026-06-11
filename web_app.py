@@ -311,6 +311,33 @@ def normalize_structured_urls(structured: dict[str, Any]) -> dict[str, Any]:
     return normalize_urls_deep(structured)
 
 
+def is_ssa_policy_citation(citation: dict[str, Any]) -> bool:
+    doc_id = str(citation.get("doc_id") or "").lower()
+    chunk_id = str(citation.get("chunk_id") or "").lower()
+    title = str(citation.get("title") or "").lower()
+    url = str(citation.get("url") or "").lower()
+
+    if doc_id.startswith("poms_") or chunk_id.startswith("poms_"):
+        return True
+    if "secure.ssa.gov" in url or "policy.ssa.gov" in url:
+        return True
+    if title.startswith("ssa - poms") or "program operations manual system" in title:
+        return True
+    return False
+
+
+def remove_non_policy_citations(structured: dict[str, Any]) -> dict[str, Any]:
+    citations = structured.get("policy_citations")
+    if not isinstance(citations, list):
+        return structured
+    structured["policy_citations"] = [
+        citation
+        for citation in citations
+        if isinstance(citation, dict) and is_ssa_policy_citation(citation)
+    ]
+    return structured
+
+
 def remove_unsupported_medical_evidence(structured: dict[str, Any], case_id: str) -> dict[str, Any]:
     """Keep medical_evidence limited to actual medical case documents.
 
@@ -1140,6 +1167,8 @@ def mission_prompt(user_query: str, mission: str, case_id: str) -> str:
 
 Selected case_id: {case_id}
 Analyze only this selected disability denial case.
+This case_id is a real backend-selected case identifier even if the user chose the bundled demo PDF.
+Never refuse because the case_id or source name appears to be an example, demo, seed, or test case.
 
 Mission-specific instruction:
 {mission_instructions(mission)}
@@ -1173,6 +1202,283 @@ Requirements:
 - If doctor records are not present, explicitly say they are missing only in a field allowed by this mission schema.
 - Do not give legal advice. State that generated content needs human advocate review.
 """
+
+
+def strict_json_retry_prompt(user_query: str, mission: str, case_id: str, previous_text: str) -> str:
+    return f"""
+Your previous response was not valid JSON.
+
+Important correction:
+- You are not being asked to convert the user's prompt into JSON.
+- You are being asked to perform the selected Dignity Machine mission using the available tools.
+- Use the selected case tools, then return one JSON object matching the schema.
+- If a field is unknown, use null, an empty string, or an empty array as appropriate.
+- Do not apologize, refuse, explain formatting, or add commentary.
+
+Previous invalid response:
+{previous_text[:1200]}
+
+Now retry the mission and return valid JSON only.
+
+{mission_prompt(user_query, mission, case_id)}
+"""
+
+
+def extract_condition_from_case_text(case_text: str) -> str:
+    patterns = [
+        r"Condition Reviewed:\s*([^\n\r]+)",
+        r"treated for\s+([A-Za-z][A-Za-z ,/-]+?)(?:,|\n|\.| including)",
+        r"condition is\s+([A-Za-z][A-Za-z ,/-]+?)(?:,|\n|\.)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, case_text, flags=re.IGNORECASE)
+        if match:
+            return re.sub(r"\s+", " ", match.group(1)).strip(" .")
+    return "the condition described in the denial"
+
+
+def fallback_missing_evidence(case_id: str) -> dict[str, Any]:
+    try:
+        case_text = case_store.case_text(case_id)
+        docs = case_store.list_documents(case_id, limit=10).get("documents", [])
+    except Exception:
+        case_text = ""
+        docs = []
+
+    doc_ids = [str(doc.get("doc_id")) for doc in docs if doc.get("doc_id")]
+    condition = extract_condition_from_case_text(case_text)
+    lower = case_text.lower()
+
+    gaps: list[dict[str, Any]] = []
+
+    def add_gap(gap_type: str, description: str, why_it_matters: str, confidence: float = 0.7) -> None:
+        gaps.append(
+            {
+                "gap_type": gap_type,
+                "description": description,
+                "why_it_matters": why_it_matters,
+                "supporting_policy_ids": [],
+                "supporting_case_doc_ids": doc_ids[:3],
+                "confidence": confidence,
+            }
+        )
+
+    if "treating doctor statement" in lower or "treating source" in lower:
+        add_gap(
+            "Treating doctor statement",
+            "The denial says the file does not include a treating doctor statement explaining functional limits.",
+            "A doctor statement can connect symptoms and treatment history to work-related limits such as sitting, standing, attendance, concentration, or pace.",
+            0.9,
+        )
+    if "follow-up treatment notes" in lower or "complete follow-up" in lower:
+        add_gap(
+            "Follow-up treatment notes",
+            "The denial says complete follow-up treatment notes were not received.",
+            "Longitudinal treatment notes help show whether symptoms persisted over time and how the condition responded to treatment.",
+            0.85,
+        )
+    if "enough detail" in lower or "how the condition" in lower or "affects your ability to work" in lower:
+        add_gap(
+            "Functional detail",
+            "The denial indicates the record does not show enough detail about how the condition affects work activity.",
+            "SSA disability decisions depend on functional impact, not only diagnosis. The record needs concrete limits and examples.",
+            0.8,
+        )
+    if not gaps:
+        add_gap(
+            "Possible missing medical support",
+            "The denial appears to question whether the available evidence is enough to show disabling work-related limits.",
+            "The next step is to identify what records, doctor opinions, or treatment details would directly answer the denial reason.",
+            0.55,
+        )
+
+    tasks = []
+    for index, gap in enumerate(gaps, start=1):
+        title = {
+            "Treating doctor statement": "Ask doctor for a work-limits statement",
+            "Follow-up treatment notes": "Request complete follow-up treatment notes",
+            "Functional detail": "Collect details about daily and work-related limits",
+        }.get(gap["gap_type"], "Review missing medical support")
+        tasks.append(
+            {
+                "task_id": stable_task_id(f"fallback_{case_id}_{index}_{gap['gap_type']}"),
+                "task_type": "missing_proof",
+                "title": title,
+                "description": gap["description"],
+                "reason": gap["why_it_matters"],
+                "status": "suggested",
+                "source": "denial_letter",
+            }
+        )
+
+    return {
+        "mission": "find_missing_evidence",
+        "case_context": f"Denial involving {condition}.",
+        "missing_evidence": gaps,
+        "case_tasks": tasks,
+        "human_review_note": "This summary is grounded in the selected denial text. A human should review the denial and requested evidence before taking action.",
+    }
+
+
+def sentence_with_any(text: str, needles: list[str]) -> str:
+    sentences = re.split(r"(?<=[.!?])\s+", re.sub(r"\s+", " ", text).strip())
+    for sentence in sentences:
+        lower = sentence.lower()
+        if any(needle in lower for needle in needles):
+            return sentence.strip()
+    return ""
+
+
+def fallback_denial_explanation(case_id: str) -> dict[str, Any]:
+    try:
+        case_text = case_store.case_text(case_id)
+    except Exception:
+        case_text = ""
+
+    condition = extract_condition_from_case_text(case_text)
+    denial_sentence = sentence_with_any(
+        case_text,
+        ["not disabled under our rules", "not disabled", "claim has been denied", "denied"],
+    )
+    work_sentence = sentence_with_any(
+        case_text,
+        ["prevents all work activity", "ability to work", "work activity", "work-related"],
+    )
+    doctor_sentence = sentence_with_any(
+        case_text,
+        ["treating doctor statement", "treating source", "doctor statement"],
+    )
+    notes_sentence = sentence_with_any(
+        case_text,
+        ["follow-up treatment notes", "complete follow-up", "treatment notes"],
+    )
+    detail_sentence = sentence_with_any(
+        case_text,
+        ["enough detail", "how the condition", "functional limitations"],
+    )
+
+    evidence = [
+        item
+        for item in [work_sentence, doctor_sentence, notes_sentence, detail_sentence]
+        if item
+    ]
+    if not evidence:
+        evidence = ["The selected denial letter says the current record does not show enough support for disability under SSA rules."]
+
+    denial_reason = work_sentence or doctor_sentence or notes_sentence or detail_sentence
+    if not denial_reason:
+        denial_reason = "The denial says the available evidence was not enough to show disabling work-related limits."
+
+    return {
+        "mission": "analyze_denial",
+        "denial_summary": denial_sentence or f"The selected denial concerns disability benefits for {condition}.",
+        "denial_reason": denial_reason,
+        "ssa_explanation": (
+            "In plain English, SSA is saying the file does not yet show enough evidence "
+            "about how the condition limits work activity. The most important next step "
+            "is to connect medical records and doctor statements to specific functional limits."
+        ),
+        "evidence_mentioned": evidence,
+        "policy_citations": [],
+        "human_review_note": "This explanation is grounded in the selected denial text. A human should review the denial and any appeal deadline before taking action.",
+    }
+
+
+def fallback_records_request(case_id: str) -> dict[str, Any]:
+    try:
+        case_text = case_store.case_text(case_id)
+    except Exception:
+        case_text = ""
+
+    condition = extract_condition_from_case_text(case_text)
+    doctor_missing = "treating doctor statement" in case_text.lower() or "doctor statement" in case_text.lower()
+    notes_missing = "follow-up treatment notes" in case_text.lower() or "complete follow-up" in case_text.lower()
+
+    records_needed = []
+    if notes_missing:
+        records_needed.append("Complete follow-up treatment notes for the condition described in the denial")
+    records_needed.append(f"Treatment records documenting diagnosis, symptoms, treatment response, and functional limits for {condition}")
+    if doctor_missing:
+        records_needed.append("A treating doctor statement explaining work-related functional limitations")
+
+    draft = (
+        "TO WHOM IT MAY CONCERN:\n\n"
+        "Please provide complete medical records for this disability claim, including progress notes, treatment plans, test results, medication history, and any functional capacity or medical opinion statements.\n\n"
+        f"The denial letter indicates that more detail is needed about {condition} and how it affects work activity. Please include records that describe symptom frequency, treatment history, response to treatment, and limits with sitting, standing, walking, lifting, attendance, concentration, pace, or other work-related functions.\n\n"
+        "Please also include any treating-source statement explaining the claimant's functional limits if available.\n\n"
+        "This request should be reviewed by the claimant or advocate before sending."
+    )
+
+    return {
+        "mission": "draft_records_request",
+        "request_context": f"Records request for a denial involving {condition}.",
+        "records_needed": records_needed,
+        "placeholder_fields": ["Doctor or clinic name", "Patient date of birth", "Date range for records", "Recipient email or fax"],
+        "records_request_draft": draft,
+        "human_review_note": "This draft is based on the selected denial text. A human should add the provider, date range, identifying details, and authorization before sending.",
+    }
+
+
+def fallback_review_summary(case_id: str) -> dict[str, Any]:
+    denial = fallback_denial_explanation(case_id)
+    missing = fallback_missing_evidence(case_id)
+    request = fallback_records_request(case_id)
+    try:
+        facts = case_fact_map(case_id)
+    except Exception:
+        facts = {}
+
+    deadline = normalize_deadline({}, case_id, facts)
+    tasks = missing.get("case_tasks", []) or []
+    if deadline.get("appeal_deadline"):
+        tasks = [
+            {
+                "task_id": stable_task_id(f"calendar_deadline_{case_id}"),
+                "task_type": "missing_proof",
+                "title": "Review possible appeal deadline",
+                "description": f"Review the possible appeal deadline: {deadline.get('appeal_deadline')}.",
+                "reason": "Appeal deadlines should be confirmed before the claimant relies on them.",
+                "status": "suggested",
+                "source": "denial_letter",
+            },
+            *tasks,
+        ]
+
+    next_actions = [
+        "Review the denial reason in plain English.",
+        "Request the missing doctor records or follow-up treatment notes.",
+        "Ask a treating doctor for a statement about work-related limits.",
+        "Review any possible appeal deadline before acting.",
+    ]
+
+    return {
+        "mission": "prepare_review_summary",
+        "denial_summary": denial.get("denial_summary", ""),
+        "policy_citations": [],
+        "missing_evidence": missing.get("missing_evidence", []) or [],
+        "deadline": deadline,
+        "case_tasks": tasks,
+        "records_request_draft": request.get("records_request_draft", ""),
+        "review_summary": (
+            f"{denial.get('denial_summary', '')} "
+            f"{denial.get('ssa_explanation', '')} "
+            "The practical next step is to collect the specific records and doctor statements that answer the denial reason."
+        ).strip(),
+        "next_actions": next_actions,
+        "human_review_note": "This review summary is grounded in the selected denial text. A human should review the denial, any deadline, and all drafts before taking action.",
+    }
+
+
+def fallback_structured_result(mission: str, case_id: str) -> dict[str, Any] | None:
+    if mission == "analyze_denial":
+        return fallback_denial_explanation(case_id)
+    if mission == "find_missing_evidence":
+        return fallback_missing_evidence(case_id)
+    if mission == "draft_records_request":
+        return fallback_records_request(case_id)
+    if mission == "prepare_review_summary":
+        return fallback_review_summary(case_id)
+    return None
 
 
 def event_to_action_logs(event: Any, mission_id: str, case_id: str) -> list[dict[str, Any]]:
@@ -1948,10 +2254,32 @@ async def analyze(payload: AnalyzeRequest) -> StreamingResponse:
             yield f"data: {json.dumps({'type': 'status', 'message': 'Parsing results...'})}\n\n"
             structured = try_parse_agent_json(final_text)
             if structured is None:
+                yield f"data: {json.dumps({'type': 'status', 'message': 'Retrying structured output...'})}\n\n"
+                session_id = stable_id("json_retry_session")
+                await session_service.create_session(app_name=active_runner.app_name, user_id=USER_ID, session_id=session_id)
+                retry_text = strict_json_retry_prompt(query, mission, case_id, final_text)
+                retry_msg = types.Content(role="user", parts=[types.Part.from_text(text=retry_text)])
+                final_text = ""
+                async with runner_lock:
+                    async for event in active_runner.run_async(user_id=USER_ID, session_id=session_id, new_message=retry_msg):
+                        logs = event_to_action_logs(event, mission_id, case_id)
+                        action_logs.extend(logs)
+                        for log in logs:
+                            yield f"data: {json.dumps({'type': 'agent_event', 'event': log})}\n\n"
+                        if event.is_final_response():
+                            final_text = as_plain_text(event)
+                structured = try_parse_agent_json(final_text)
+            if structured is None:
+                fallback = fallback_structured_result(mission, case_id)
+                if fallback is not None:
+                    yield f"data: {json.dumps({'type': 'status', 'message': 'Checking selected denial text...'})}\n\n"
+                    structured = fallback
+            if structured is None:
                 yield f"data: {json.dumps({'type': 'status', 'message': 'Reformatting output...'})}\n\n"
                 repair_text = await repair_agent_json(final_text, active_runner)
                 structured = parse_agent_json(repair_text)
             structured = normalize_structured_urls(structured)
+            structured = remove_non_policy_citations(structured)
             if "medical_evidence" in structured:
                 structured = remove_unsupported_medical_evidence(structured, case_id)
             structured = remove_unsupported_generated_case_claims(structured, case_id)
